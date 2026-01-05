@@ -10,6 +10,7 @@ import time
 import json
 from ftplib import FTP
 import requests
+import os
 
 eventlet.monkey_patch()  # patch for eventlet async support
 
@@ -25,7 +26,7 @@ app = Flask(__name__)
 # )
 
 # FTP 
-FTP_HOST = '203.151.166.53'
+FTP_HOST = os.getenv('FTP_HOST') 
 FTP_USER = '1mptf@mdbiot.com'
 FTP_PASS = 'Asefa@2o23'
 # TARGET_FILE = 'example.txt'  # File to check on FTP server
@@ -349,4 +350,5 @@ def handle_ice(data):
     emit("ice-candidate", data, broadcast=True, include_self=False)
 
 if __name__ == '__main__':
+
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
