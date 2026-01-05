@@ -27,12 +27,12 @@ app = Flask(__name__)
 
 # FTP 
 FTP_HOST = os.getenv('FTP_HOST') 
-FTP_USER = '1mptf@mdbiot.com'
-FTP_PASS = 'Asefa@2o23'
+FTP_USER = os.getenv('FTP_USER') 
+FTP_PASS = os.getenv('FTP_PASS') 
 # TARGET_FILE = 'example.txt'  # File to check on FTP server
 # TARGET_DIR = '/'             # Directory to look in (optional)
 
-app.config['MQTT_BROKER_URL'] = 'mqtt.mdbiot.com'  # public broker
+app.config['MQTT_BROKER_URL'] = os.getenv('MQTT_BROKER_URL')   # public broker
 app.config['MQTT_BROKER_PORT'] = 1883
 app.config['MQTT_USERNAME'] = ''  # set if needed
 app.config['MQTT_PASSWORD'] = ''  # set if needed
@@ -50,9 +50,9 @@ subscribed_topics = set()
 
 def connect_db():
     return pymysql.connect(
-        host='203.151.166.53',
-        user='mdbiot_remote_php',
-        password='Asefa@2o23',
+        host=os.getenv('FTP_HOST') ,
+        user=os.getenv('db_user') ,
+        password=os.getenv('db_pass'),
         db='mdbiot_com',
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True
@@ -352,3 +352,4 @@ def handle_ice(data):
 if __name__ == '__main__':
 
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+
