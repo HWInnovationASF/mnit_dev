@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+    <title>MQTT</title>
+</head>
+<body>
+    <button onclick="window.location.href='/'">Home</button>
+    <a href="#" onclick="openVNC2()">Open VNC</a>
+    <!-- <a href="vnc://172.16.110.149:5800">Open RealVNC via vnc://</a>
+    <a href="vnc://172.16.110.149:5900">Open VNC Viewer</a> -->
+    <a href="openvpn://connect?config=MyVPNConfig">Launch OpenVPN</a>
+    
+
+    <div style="display: flex;margin-bottom: 5px;">
+        <div style="margin-right: 5px;">Device_SN: {{message}}</div>
+    </div>
+
+    <div class="hr-with-text">
+        <span>Connect Step.</span>
+    </div>
+    <div style="display: flex;margin-bottom: 5px;">
+        <div>[step.1]</div>
+        <button onclick="subscribeTopic('meow/{{ message }}')" style="margin-right: 5px;">Subscribe</button>
+        <button onclick="unsubscribeTopic('meow/{{ message }}')" style="margin-right: 5px;">unSubscribe</button>
+    </div>
+    <hr>
+
+    <div style="display:flex;margin-bottom: 5px;">
+        <div>[step.2]</div>
+        <button onclick="sendCMD('meow/{{ message }}','{{cmd_check}}')" style="margin-right: 5px;">VPN Check</button>
+        <div> >> </div>
+        <button onclick="sendCMD('meow/{{ message }}','{{cmd_on}}')" style="margin-right: 5px;">VPN ON</button>
+        <button onclick="sendCMD('meow/{{ message }}','{{cmd_off}}')" style="margin-right: 5px;">VPN OFF</button>
+    </div>
+    <hr>
+
+    <div style="display:flex;margin-bottom: 5px;">
+        <div>[step.3]</div>
+        <button onclick="connectVPN('')" style="margin-right: 5px;">connectVPN</button>
+        <button onclick="closeVPN('')" style="margin-right: 5px;">closetVPN</button>
+    </div>
+    <hr>
+
+    <div style="display:flex;font-size: 22px;margin-bottom: 5px;">
+        <div style="font-weight: 700;">IP VPN:</div>
+        <div id="ip-vpn" style="font-weight: 500;"></div>
+        <button id="bt-ip-vpn" onclick="copyText('ip-vpn')" style="display:none;">Copy</button>
+    </div>
+    <div style="display:flex;margin-bottom: 5px;">
+        <div>[step.4]</div>
+        <button onclick="openVNC('')" style="margin-right: 5px;">openVNC</button>
+        <button onclick="openSSH('')" style="margin-right: 5px;">openSSH</button>
+    </div>
+
+    <div class="hr-with-text">
+        <span>Test Beny EV RS-485.</span>
+    </div>
+    <div style="display:flex;margin-bottom: 5px;">
+        <div>[step.5]</div>
+        <button onclick="subscribeTopic('res/{{ message }}')" style="margin-right: 5px;">res/ Subscribe</button>
+    </div>
+    <div style="display:flex;margin-bottom: 5px;">
+        <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"cmd\", \"data\":{\"EV000002\":{\"offset_time\":{\"read\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">test_BF002</button>
+        <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"cmd\", \"data\":{\"EV000003\":{\"offset_time\":{\"read\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">test_BF003</button>
+
+    </div>
+
+    <div class="hr-with-text">
+        <span>Config</span>
+    </div>
+
+    <div>
+        <div></div>
+    </div>
+    <hr>
+
+    
+    <h3>Status:</h3>
+    <div id="topics">-</div>
+    <hr>
+
+
+    <h1>Live Messages</h1>
+    <ul id="messages">-</ul>
+    <hr>
+
+    <script>
+        const socket = io();
+        let ip_vpn;
+
+        // function subscribeTopic(e) {
+        //     e.preventDefault();
+        //     const topic = document.getElementById("subTopic").value;
+        //     console.log(topic);
+            
+        //     socket.emit('subscribe', { topic });
+        // }
+        function subscribeTopic(topic) {
+            // e.preventDefault();
+            // const topic = document.getElementById("subTopic").value;
+            console.log(topic);
+            
+            socket.emit('subscribe', { topic });
+        }
+        function unsubscribeTopic(topic) {
+            // e.preventDefault();
+            // const topic = document.getElementById("subTopic").value;
+            console.log(topic);
+            
+            socket.emit('unsubscribe', { topic });
+        }
+        function sendCMD(topic,cmd) {
+            // e.preventDefault();
+            // const topic = document.getElementById("subTopic").value;
+            console.log(topic,cmd);
+            
+            socket.emit('sendCMD', { send_topic:topic,send_message:cmd });
+        }
+
+        function openVNC(cmd) {
+            // e.preventDefault();
+            // const myInput_01 = document.getElementById("myInput_01").value;
+            console.log(ip_vpn);
+            
+            socket.emit('openVNC', { send_message:ip_vpn });
+        }
+        function openSSH(cmd) {
+            // e.preventDefault();
+            // const myInput_01 = document.getElementById("myInput_01").value;
+            console.log(ip_vpn);
+            
+            socket.emit('openSSH', { send_message:ip_vpn });
+        }
+        function testMSG(topic,cmd) {
+            // e.preventDefault();
+            // const topic = document.getElementById("subTopic").value;
+            console.log(topic,cmd);
+            
+            socket.emit('testMSG', { send_topic:topic,send_message:cmd });
+        }
+        function connectVPN(cmd) {
+            // e.preventDefault();
+            // const myInput_01 = document.getElementById("myInput_01").value;
+            console.log('connectVPN');
+            
+            socket.emit('connectVPN', { send_message:ip_vpn });
+        }
+        function closeVPN(cmd) {
+            // e.preventDefault();
+            // const myInput_01 = document.getElementById("myInput_01").value;
+            console.log('closeVPN');
+            
+            socket.emit('closeVPN', { send_message:ip_vpn });
+        }
+        // function openVNC2() {
+        //     window.location = 'vnc://172.16.110.149';
+        //     setTimeout(() => {
+        //         window.location = 'https://apps.apple.com/app/realvnc-viewer/id352019548';
+        //     }, 2000); // fallback to App Store after 2s
+        // }
+        function openVNC2() {
+            // const ip = '172.16.110.149'; // Change to your target IP or hostname
+            const ip = ip_vpn; // Change to your target IP or hostname
+            console.log(navigator.userAgent);
+            
+
+            const isWindows = /Windows/i.test(navigator.userAgent);
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+            console.log(isWindows);
+            if (isWindows) {
+                // Android intent for Chrome
+                window.location.href = `vnc://${ip}:5901`;
+            } 
+            
+            if (isAndroid) {
+                // Android intent for Chrome
+                window.location = `intent://${ip}#Intent;scheme=vnc;package=com.realvnc.viewer.android;end`;
+            } 
+
+            if(isiOS){
+                window.location = `vnc://${ip}`;
+            }
+            // else {
+            //     // All others: iOS, Windows, macOS
+            //     window.location = `vnc://${ip}`;
+            //     // Fallback to app store/download page after 2 seconds
+            //     setTimeout(() => {
+            //     if (isiOS) {
+            //         window.location.href = 'https://apps.apple.com/app/realvnc-viewer/id352019548';
+            //     } else if (isAndroid) {
+            //         window.location.href = 'https://play.google.com/store/apps/details?id=com.realvnc.viewer.android';
+            //     } else {
+            //         window.location.href = 'https://www.realvnc.com/en/connect/download/viewer/';
+            //     }
+            //     }, 2000);
+            // }
+        
+        }
+
+        function copyText(id) {
+            const text = document.getElementById(id).textContent;
+            if(text){
+                console.log("Text:", text);
+
+                navigator.clipboard.writeText(text)
+                .then(() => alert("Copied to clipboard!"))
+                .catch(err => console.error("Copy failed", err));
+            }else{
+                console.log("text null");
+                
+            }
+        }
+
+        socket.on('mqtt_message', data => {
+            const params = new URLSearchParams(window.location.search);
+            const device_sn = params.get("device_sn"); 
+            if(data.topic == 'meow/'+device_sn || data.topic == 'res/'+device_sn){
+                const messagesDiv = document.getElementById("messages");
+                const line = document.createElement("p");
+                line.textContent = `[${data.topic}] ${data.message}`;
+                // messagesDiv.appendChild(line);
+                messagesDiv.innerHTML = `[${data.topic}] ${data.message}`;
+
+                // ip_vpn
+                let msg_arr = JSON.parse(data.message);
+
+                // document.getElementById("messages").innerHTML = '';
+
+                
+                if('ipvpn' in msg_arr){
+                    ip_vpn = msg_arr.ipvpn
+                    const ip_vpn_DIV = document.getElementById("ip-vpn");
+                    ip_vpn_DIV.innerHTML = `${ip_vpn}`;
+
+                    console.log(ip_vpn);
+                    document.getElementById("bt-ip-vpn").style.display = ip_vpn_DIV !== null ? "block" : "none";
+                }else{
+                    document.getElementById("bt-ip-vpn").style.display = 'none';
+                    console.log('============222');
+                    
+                }
+                // console.log(ip_vpn);
+
+                
+                
+            }
+        });
+
+        socket.on('mqtt_topic', data => {
+            const messagesDiv = document.getElementById("topics");
+            const line = document.createElement("p");
+            line.textContent = `[${data.topic}] ${data.message}`;
+            // messagesDiv.appendChild(line);
+            console.log(data);
+            messagesDiv.innerHTML = `[${data.topic}] ${data.message}`;
+            
+            
+        });
+
+        socket.on('mqtt_sendCMD', function(data) {
+            const messagesDiv = document.getElementById("topics");
+            const line = document.createElement("p");
+            line.textContent = `[${data.topic}] ${data.message}`;
+            // messagesDiv.appendChild(line);
+            messagesDiv.innerHTML = `[${data.topic}] ${data.message}`;
+            
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const socket = io();
+
+            socket.on('mqtt_response', data => {
+                const output = document.getElementById('response');
+                output.innerHTML = `
+                    <p><strong>Topic:</strong> ${data.topic}</p>
+                    <p><strong>Message:</strong> ${data.message}</p>
+                `;
+            });
+        });
+
+    </script>
+    <style>
+        .hr-with-text {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .hr-with-text::before,
+        .hr-with-text::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #999;
+        }
+
+        .hr-with-text span {
+            padding: 0 10px;
+            font-weight: bold;
+            color: #444;
+        }
+    </style>
+</body>
+</html>

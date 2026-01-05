@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}My Website{% endblock %}</title>
+</head>
+<body>
+    {% include 'a_top.html' %}
+
+    <main>
+        {% include 'index.html' %}
+    </main>
+
+    {% include 'z_footer.html' %}
+</body>
+</html>

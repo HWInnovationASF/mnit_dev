@@ -1,0 +1,239 @@
+{% include 'a_top.html' %}
+
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<br>
+
+
+<div style="padding: 15px;;">
+    <div>Device S/N : {{device_sn}}</div>
+    <button class="btn btn-primary" onclick="subscribeTopic('res/{{ device_sn }}')" style="margin-right: 5px;">res/ Subscribe</button>
+    <!-- <button onclick='testMSG("meow/{{ device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"PM210001\":{\"p_t\":{\"read\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">p_t_READ</button> -->
+
+    <button  class="btn btn-primary" id="startBtn">Start</button>
+
+    <div id="container" style="width:80%; height:400px;"></div>
+</div>
+
+{% for data_arr in rows %}
+    {{data_arr.DataA}}
+{% endfor %}
+<!-- <ul>
+{% for val in rows %}
+    <li onclick="toggleContent(this)"><div class="content">{{device_sn}}{{val.DataA}}</div></li>
+{% endfor %}
+</ul> -->
+<!-- <h2>Users</h2> -->
+<script>
+    let socket = io();
+    let h_data_arr = [];
+    // h_data_arr = (['170000000',1231])
+
+    const data = {{ rows | safe }};
+    const device_sn = '{{device_sn}}';
+    // console.log(typeof(data));
+    // console.log(data);
+    
+    let data_arr = [];
+    // Use it (e.g., loop and display)
+    // data.forEach(e => {
+    //     const p = document.createElement('p');
+    //     p.textContent = `${e.TS} (${e.DataA})`;
+    //     document.body.appendChild(p);
+    //     // console.log(e);
+    //     let data_arr = JSON.parse(e.DataA);
+    //     console.log(e.DT,data_arr[device_sn]['PM210001']);
+        
+    //     // data_arr[e.DT] = e.DataA;
+    //     h_data_arr = ([(e.TS*1000),parseFloat(data_arr[device_sn]['PM210001']['p_t'])]);
+    //     chart.series[0].addPoint(h_data_arr, true, false);
+
+        
+    // });
+    // console.log(data_arr);
+    
+    // function toggleContent(element) {
+    //     const content = element.querySelector('.content');
+    //     if (content) {
+    //         content.style.display = (content.style.display === 'none' || content.style.display === '') ? 'block' : 'none';
+    //     }
+    // }
+    let intervalId = null;
+
+    document.getElementById("startBtn").addEventListener("click", function() {
+        const button = this;
+
+        if (intervalId === null) {
+            // Start the interval
+            intervalId = setInterval(() => {
+                testMSG("meow/{{ device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"PM210001\":{\"p_t\":{\"read\":1}}}, \"cmd_id\": \"C1728370820091\" }");
+            }, 3000);
+
+            button.textContent = "Stop";
+            button.className = "btn btn-danger";
+
+        } else {
+            // Stop the interval
+            clearInterval(intervalId);
+            intervalId = null;
+            button.textContent = "Start";
+            button.className = "btn btn-primary";
+        }
+    });
+    
+    function subscribeTopic(topic) {
+        // e.preventDefault();
+        // const topic = document.getElementById("subTopic").value;
+        console.log(topic);
+        
+        socket.emit('subscribe', { topic });
+    }
+
+    function testMSG(topic,cmd) {
+        // e.preventDefault();
+        // const topic = document.getElementById("subTopic").value;
+        console.log(topic,cmd);
+        
+        socket.emit('testMSG', { send_topic:topic,send_message:cmd });
+    }
+
+
+    socket.on('mqtt_message', data => {
+        // const messagesDiv = document.getElementById("messages");
+        // const line = document.createElement("p");
+        // line.textContent = `[${data.topic}] ${data.message}`;
+        // messagesDiv.appendChild(line);
+        // messagesDiv.innerHTML = `[${data.topic}] ${data.message}`;
+        // console.log(data.message);
+        
+        let msg_arr = JSON.parse(data.message);
+        let res_ts = msg_arr.ts
+        let device_SN = msg_arr.device_SN
+
+        if(device_sn == device_SN){
+            // console.log(device_sn,msg_arr.data);
+
+            // const p = document.createElement('p');
+            // p.textContent = `(${JSON.stringify(msg_arr.data)})`;
+            // document.body.appendChild(p);
+            if('PM210001' in (msg_arr.data)){
+                let v = msg_arr.data;
+                h_data_arr = ([(msg_arr.ts*1000),parseFloat(v['PM210001']['p_t'])]);
+                chart.series[0].addPoint(h_data_arr, true, false);
+                const lastPoint = chart.series[0].data[chart.series[0].data.length - 1];
+                chart.tooltip.refresh(lastPoint); // 🔍 show tooltip
+                
+            }
+        }
+
+        // console.log(h_data_arr);
+        
+    });
+</script>
+
+<script>
+    Highcharts.setOptions({
+        time: {
+            timezone: 'Asia/Bangkok'
+        }
+    });
+    const chart = Highcharts.chart('container', {
+        chart: {
+            type: 'line',
+            time: {
+                useUTC: false
+            },
+            // backgroundColor: '#000'
+        },
+        title: {
+            text: 'Dynamically chart'
+        },
+        credits: {
+            enabled: false
+        },
+        xAxis: {
+            // crosshair: {
+			// 	width: 1,
+			// 	color: '#FFA500'
+			// },
+            type: 'datetime',
+            labels: {
+                format: '{value:%H:%M}'  // 24-hour format
+	        },
+
+        },
+        legend: {
+            layout: 'horizontal',
+            align: 'center',
+            verticalAlign: 'bottom',
+            itemStyle: {
+                color: '#ffffff'
+            }
+        },
+        plotOptions: {
+            series: {
+                cursor: 'pointer',
+                label: {
+                    connectorAllowed: false
+                },
+            //    pointStart: 2010
+            }
+        },
+        tooltip: {
+            // backgroundColor: '#FCFFC5',
+            // borderColor: 'black',
+            // borderRadius: 10,
+            // borderWidth: 3,
+            xDateFormat: '%e %b %Y %H:%M:%S',
+            headerFormat: '<div style="background-color:#FFFFFF;padding:0.75vh;border-radius:5px;"><span style="font-size:12px"><b>{point.key}</b></span><br/>',
+            pointFormat: '<div style="display:flex;"><div style="width:1.75vh;height:1.75vh;border:1px solid {series.color};border-radius:50%;background-color:{series.color};"></div>' + '<div style="font-size:10px;"><b>{series.name} : {point.y:.2f} </b></div></div>',
+            footerFormat: '</div>',
+            shared: true,
+            useHTML: true
+        },
+        series: [{
+            name: 'active power',
+            data: []
+        }]
+    });
+
+    // let x = 4;
+
+    // setInterval(() => {
+    //     const y = Math.floor(Math.random() * 10);
+    //     chart.series[0].addPoint([x, y], true, false); // add point, redraw, don't shift
+    //     x++;
+    // }, 1000);
+
+    data.forEach(e => {
+        // const p = document.createElement('p');
+        // p.textContent = `${e.TS} (${e.DataA})`;
+        // document.body.appendChild(p);
+        // console.log(e);
+        let data_arr = JSON.parse(e.DataA);
+        // console.log(e.DT,data_arr[device_sn]['PM210001']);
+        if (device_sn.startsWith("M1")) {
+            console.log("M1", device_sn); // Output: "Hello world,"
+        
+            // data_arr[e.DT] = e.DataA;
+            h_data_arr = ([(e.TS*1000),parseFloat(data_arr[device_sn]['PM210001']['p_t'])]);
+            chart.series[0].addPoint(h_data_arr, true, false);
+            const lastPoint = chart.series[0].data[chart.series[0].data.length - 1];
+            chart.tooltip.refresh(lastPoint); // 🔍 show tooltip
+        }
+
+
+        
+    });
+</script>
+
+
+<style>
+    /* content {
+        display: none;
+        margin-left: 20px;
+        color: gray;
+    }
+    li {
+        cursor: pointer;
+    } */
+</style>

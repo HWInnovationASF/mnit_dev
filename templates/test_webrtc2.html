@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flask WebRTC Video Chat</title>
+  <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+  <style>
+    video { width: 45%; margin: 5px; border: 2px solid #555; }
+  </style>
+</head>
+<body>
+  <h1>Flask + WebRTC Video Chat</h1>
+  <video id="localVideo" autoplay muted playsinline></video>
+  <video id="remoteVideo" autoplay playsinline></video>
+
+  <div id="errorMsg" style="color: red;"></div>
+
+  <script>
+    const errorMsg = document.getElementById('errorMsg');
+    const socket = io();
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      errorMsg.textContent = "getUserMedia not supported in your browser.";
+    }
+
+    let localStream;
+    const peer = new RTCPeerConnection();
+
+    // Display local media
+    async function startLocalStream() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('localVideo').srcObject = localStream;
+        localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+      } catch (err) {
+        errorMsg.textContent = "Error accessing camera/mic: " + err.message;
+      }
+    }
+
+    // Create and send offer
+    async function createOffer() {
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      socket.emit('offer', offer);
+    }
+
+    // Handle remote tracks
+    peer.ontrack = event => {
+      document.getElementById('remoteVideo').srcObject = event.streams[0];
+    };
+
+    // Send ICE candidates to peer
+    peer.onicecandidate = event => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', event.candidate);
+      }
+    };
+
+    // Socket.IO signaling handlers
+    socket.on('offer', async (offer) => {
+      await peer.setRemoteDescription(new RTCSessionDescription(offer));
+      if (!localStream) await startLocalStream();
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+      socket.emit('answer', answer);
+    });
+
+    socket.on('answer', async (answer) => {
+      await peer.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    socket.on('ice-candidate', async (candidate) => {
+      try {
+        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.error('Error adding received ice candidate', err);
+      }
+    });
+
+    // Start everything on page load
+    startLocalStream().then(createOffer);
+  </script>
+</body>
+</html>

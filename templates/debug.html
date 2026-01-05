@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT + SocketIO</title>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+    <div>
+        <div>
+            <button onclick="subscribeTopic('meow/#')">Debug</button>
+            <button onclick="unsubscribeTopic('meow/#')">Stop</button>
+        </div>
+    </div>
+    <div style="display:flex;flex-direction: column;align-items: center;">
+        {% for device_sn in data %}
+        <div style="display:flex;">
+            <div style="width:35px;"><div id="status-dev-{{ device_sn }}"></div></div>
+            <input type="text" id="device_sn" value="{{ device_sn }}" disabled>
+            <button onclick="window.location.href='/mqtt?device_sn={{ device_sn }}'">MQTT</button>
+            <!-- <button onclick="linkpagr('mqtt','{{ device_sn }}')">MQTT</button> -->
+            <button onclick="linkpagr('vpn','{{ device_sn }}')">VPN</button>
+        </div>
+        {% endfor  %}
+    </div>
+    <table>
+        <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+        </tr>
+        {% for data_k in data_arr %}
+        {% if data_k.device_SN%}
+        <tr>
+            <td>{{data_k.device_SN}}</td>
+            <td>{{data_k.DT}}</td>
+            <td>{{data_k.TS_last}}</td>
+        </tr>
+
+        {% endif  %}
+        {% endfor  %}
+            
+    </table>
+    
+
+    <!-- <h1>MQTT messages (real-time)</h1>
+    <ul id="messages"></ul> -->
+    <script>
+        var socket = io();
+
+        function linkpagr(page,device_sn) {
+            fetch('/mqtt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_sn: device_sn })
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Redirect to another page after success
+                    // window.location.href = "/pg"+page;
+                } else {
+                    console.error('POST failed');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        function subscribeTopic(topic) {
+            // e.preventDefault();
+            // const topic = document.getElementById("subTopic").value;
+            console.log(topic);
+            
+            socket.emit('subscribe', { topic });
+        }
+        function unsubscribeTopic(topic) {
+            // e.preventDefault();
+            // const topic = document.getElementById("subTopic").value;
+            console.log(topic);
+            
+            socket.emit('unsubscribe', { topic });
+        }
+
+        socket.on('mqtt_message', data => {
+            // const messagesDiv = document.getElementById("messages");
+            // const line = document.createElement("p");
+            // line.textContent = `[${data.topic}] ${data.message}`;
+            // messagesDiv.appendChild(line);
+            // messagesDiv.innerHTML = `[${data.topic}] ${data.message}`;
+            // console.log(data.message);
+            let msg_arr = JSON.parse(data.message);
+            let res_ts = msg_arr.ts
+            let device_SN = msg_arr.device_SN
+            console.log(typeof(msg_arr),res_ts,device_SN);
+
+            const status_dev = document.getElementById("status-dev-"+device_SN);
+            // const line = document.createElement("div");
+            // status_dev.innerHTML = `ON`;
+            if(status_dev){
+                status_dev.innerHTML = 'ON';
+            }
+
+            
+            
+            
+        });
+    </script>
+</body>
+</html>
