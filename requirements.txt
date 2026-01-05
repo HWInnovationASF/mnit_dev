@@ -1,0 +1,6 @@
+Flask
+flask-mqtt
+flask-socketio
+eventlet
+PyMySQL
+requests
