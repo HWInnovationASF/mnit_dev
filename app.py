@@ -1,8 +1,9 @@
+import eventlet 
+eventlet.monkey_patch()  # patch for eventlet async support
 from flask import Flask, g, render_template, request, jsonify 
 from functools import wraps 
 from flask_mqtt import Mqtt 
 from flask_socketio import SocketIO, emit, join_room
-import eventlet 
 import pymysql 
 import re
 import subprocess
@@ -11,8 +12,6 @@ import json
 from ftplib import FTP
 import requests
 import os
-
-eventlet.monkey_patch()  # patch for eventlet async support
 
 app = Flask(__name__)
 
@@ -296,5 +295,6 @@ def handle_ice(data):
 if __name__ == '__main__':
 
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+
 
 
