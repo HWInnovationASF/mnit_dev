@@ -16,15 +16,6 @@ eventlet.monkey_patch()  # patch for eventlet async support
 
 app = Flask(__name__)
 
-# Connect to MySQL
-# connection = pymysql.connect(
-#     host='203.151.166.53',
-#     user='mdbiot_remote_php',
-#     password='Asefa@2o23',
-#     db='mdbiot_com',
-#     cursorclass=pymysql.cursors.DictCursor
-# )
-
 # FTP 
 FTP_HOST = os.getenv('FTP_HOST') 
 FTP_USER = os.getenv('FTP_USER') 
@@ -181,53 +172,6 @@ def handle_dashboard():
     # print(device_sn)
     return render_template('vx_dashboard.html',rows=result,device_sn=device_sn)
 
-# @app.route('/')
-# def index():
-#     try:
-#         # with connection.cursor() as cursor:
-#         cursor = get_cursor()
-#         cursor.execute("SELECT * FROM device_status WHERE device_SN LIKE 'M1%'")
-#         result = cursor.fetchall()
-#         d_arr = [item['device_SN']  for item  in result]
-#         # Filter values starting with "M1"
-#         pattern = r'^M1'  # regex: start with M1
-#         # print(sorted_people.)
-#         matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
-#         sorted_people = sorted(result, key=lambda person: person["device_SN"])
-
-#         return render_template('index.html',data = matched_sns,data_arr=sorted_people )
-#         # return render_template('index.html') 
-        
-#     except Exception as e:
-#         print('Except as {}'.format(e))
-#         return render_template('index.html') 
-
-# @app.route('/m1')
-# def index_m1():
-#     try:
-#         path = request.path
-#         print(path)
-#         # with connection.cursor() as cursor:
-#         cursor = get_cursor()
-#         cursor.execute("SELECT * FROM device_status WHERE device_SN LIKE 'M1%'")
-#         result = cursor.fetchall()
-#         d_arr = [item['device_SN']  for item  in result]
-#         # Filter values starting with "M1"
-#         pattern = r'^M1'  # regex: start with M1
-#         # print(sorted_people.)
-#         matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
-#         sorted_people = sorted(result, key=lambda person: person["device_SN"])
-#         return render_template('index.html',data = matched_sns,data_arr=sorted_people )
-#         # return render_template('index.html') 
-#     except Exception as e:
-#         print('Except as {}'.format(e))
-#         return render_template('index.html') 
-    
-# @app.route('/mqtt', methods=['GET', 'POST'])
-# def debug_device():
-#     mqtt.subscribe('meow/#')
-
-
 @app.route('/mqtt', methods=['GET', 'POST'])
 def mx_mqtt():
     message = None
@@ -352,4 +296,5 @@ def handle_ice(data):
 if __name__ == '__main__':
 
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+
 
