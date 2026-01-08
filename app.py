@@ -1,5 +1,7 @@
-import eventlet 
-eventlet.monkey_patch()  # patch for eventlet async support
+# import eventlet 
+# eventlet.monkey_patch()  # patch for eventlet async support
+import eventlet.hubs
+eventlet.hubs.use_hub("eventlet.hubs.asyncio")
 from flask import Flask, g, render_template, request, jsonify 
 from functools import wraps 
 from flask_mqtt import Mqtt 
@@ -12,6 +14,10 @@ import json
 from ftplib import FTP
 import requests
 import os
+from dotenv import load_dotenv
+# pip install -r requirements.txt
+
+load_dotenv()  # <-- load .env first
 
 app = Flask(__name__)
 
@@ -108,6 +114,7 @@ def on_message(client, userdata, message):
 @app.route('/')
 def handle_home():
     return render_template('welcome.html')
+    # return render_template('template1.html')
 
 @app.route('/debug')
 def handle_debug():
@@ -185,7 +192,7 @@ def mx_mqtt():
     cmd_check = '{ "mode": "cmd", "data":{"VPN":2}, "cmd_id": "C1728370820091" }'
     # print(device_sn,topic)
 
-    return render_template('mx_mqtt.html', message=device_sn,topic=topic,cmd_on=cmd_on,cmd_off=cmd_off,cmd_check=cmd_check)
+    return render_template('mx_mqttmanage.html', message=device_sn,topic=topic,cmd_on=cmd_on,cmd_off=cmd_off,cmd_check=cmd_check)
 
 @app.route('/config', methods=['GET', 'POST'])
 def mx_config():
@@ -224,7 +231,7 @@ def handle_unsubscribe(data):
         print(subscribed_topics)
         subscribed_topics.remove(topic)
         print(f"Subscribed to topic: {topic}")
-        socketio.emit('mqtt_topic', {'topic': topic, 'message': f"✅ Subscribed to {topic}"})
+        socketio.emit('mqtt_topic', {'topic': topic, 'message': f"✅ unSubscribed to {topic}"})
     else:
         socketio.emit('mqtt_topic', {'topic': topic, 'message': f"⚠️ Already subscribed to {topic}"})
 
