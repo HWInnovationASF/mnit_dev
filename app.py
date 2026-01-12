@@ -1,7 +1,7 @@
-# import eventlet 
-# eventlet.monkey_patch()  # patch for eventlet async support
-import eventlet.hubs
-eventlet.hubs.use_hub("eventlet.hubs.asyncio")
+import eventlet 
+eventlet.monkey_patch()  # patch for eventlet async support
+# import eventlet.hubs
+# eventlet.hubs.use_hub("eventlet.hubs.asyncio")
 from flask import Flask, g, render_template, request, jsonify 
 from functools import wraps 
 from flask_mqtt import Mqtt 
@@ -302,6 +302,7 @@ def handle_ice(data):
 if __name__ == '__main__':
 
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+
 
 
 
