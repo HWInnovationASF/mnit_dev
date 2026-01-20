@@ -1,8 +1,15 @@
 import eventlet 
+
+# import eventlet.hubs
+eventlet.monkey_patch()  # patch for eventlet async support
+# eventlet.hubs.use_hub("eventlet.hubs.asyncio")
+from flask import Flask, g, render_template, request, jsonify ,abort,Response
+
 eventlet.monkey_patch()  # patch for eventlet async support
 # import eventlet.hubs
 # eventlet.hubs.use_hub("eventlet.hubs.asyncio")
 from flask import Flask, g, render_template, request, jsonify 
+
 from functools import wraps 
 from flask_mqtt import Mqtt 
 from flask_socketio import SocketIO, emit, join_room
@@ -15,6 +22,9 @@ from ftplib import FTP
 import requests
 import os
 from dotenv import load_dotenv
+
+from werkzeug.utils import secure_filename
+import io
 # pip install -r requirements.txt
 
 load_dotenv()  # <-- load .env first
@@ -170,7 +180,7 @@ def handle_dashboard():
     st = time.time()
     device_sn = request.args.get("device_sn")
     cursor = get_cursor()
-    cursor.execute("SELECT DT,TS,DataA FROM log05 WHERE device_SN = '{}' ORDER BY DT DESC LIMIT 11".format(device_sn))
+    cursor.execute("SELECT DT,TS,DataA FROM log05 WHERE device_SN = '{}' ORDER BY DT DESC LIMIT 10".format(device_sn))
     result = cursor.fetchall()
     print(time.time() - st)
     # print(jsonify(result))
@@ -194,20 +204,142 @@ def mx_mqtt():
 
     return render_template('mx_mqttmanage.html', message=device_sn,topic=topic,cmd_on=cmd_on,cmd_off=cmd_off,cmd_check=cmd_check)
 
+@app.route("/ftp_py/<path:filepath>")
+def preview_ftp_py(filepath):
+    FTP_BASE = "/mainfile_M1"
+
+    # prevent path traversal
+    if ".." in filepath:
+        abort(403)
+
+    # allow only text/code files
+    ALLOWED_EXT = (".py", ".json", ".php", ".txt", "ovpn")
+    if not filepath.lower().endswith(ALLOWED_EXT):
+        abort(403)
+
+    ftp = FTP(FTP_HOST)
+    ftp.login(FTP_USER, FTP_PASS)
+
+    full_path = f"{FTP_BASE}/{filepath}"
+
+    buffer = io.BytesIO()
+
+    try:
+        # 🔒 ensure it's NOT a directory
+        try:
+            ftp.cwd(full_path)
+            ftp.quit()
+            abort(403)  # it's a directory
+        except:
+            pass
+
+        ftp.retrbinary(f"RETR {full_path}", buffer.write)
+
+    except Exception as e:
+        ftp.quit()
+        abort(404)
+
+    ftp.quit()
+    buffer.seek(0)
+
+    return Response(
+        buffer.read(),
+        mimetype="text/plain; charset=utf-8"
+    )
+   
+@app.route("/ftp_delete/<filename>", methods=["DELETE"])
+def delete_ftp_file(filename):
+    filename = secure_filename(filename)
+    FTP_DIR  = "/mainfile_M1"   # directory to list
+    ftp = FTP(FTP_HOST)
+    ftp.login(FTP_USER, FTP_PASS)
+    ftp.cwd(FTP_DIR)
+
+    try:
+        ftp.delete(filename)
+    except Exception as e:
+        ftp.quit()
+        abort(404, str(e))
+
+    ftp.quit()
+    return jsonify({"status": "ok", "file": filename})
+
 @app.route('/config', methods=['GET', 'POST'])
 def mx_config():
+    
     message = None
     subTopic=""
     if request.method == 'POST':
         data = request.get_json()
         subTopic = data.get("subTopic")
+        print(data) 
     topic = request.form.get('topic')
     device_sn = request.args.get('device_sn')
     cmd_on = '{ "mode": "cmd", "data":{"VPN":1}, "cmd_id": "C1728370820091" }'
     cmd_off = '{ "mode": "cmd", "data":{"VPN":0}, "cmd_id": "C1728370820091" }'
     cmd_check = '{ "mode": "cmd", "data":{"VPN":2}, "cmd_id": "C1728370820091" }'
+   
+    # def get_ftp_files():
+    #     FTP_DIR  = "/mainfile_M1"   # directory to list
+    #     ftp = FTP(FTP_HOST)
+    #     ftp.login(FTP_USER, FTP_PASS)
+    #     ftp.cwd(FTP_DIR)
+    #     files = ftp.nlst()
+    #     ftp.quit()
+    #     return files
+    def get_ftp_files(_DIR):
+        # FTP_DIR = "/mainfile_M1"
 
-    return render_template('mx_mqtt.html', message=device_sn,topic=topic,cmd_on=cmd_on,cmd_off=cmd_off,cmd_check=cmd_check)
+        ftp = FTP(FTP_HOST)
+        ftp.login(FTP_USER, FTP_PASS)
+        ftp.cwd(_DIR)
+
+        items = []
+        names = ftp.nlst()
+        pwd = ftp.pwd()
+
+        for name in names:
+            if name in ('.', '..'):
+                continue
+
+            is_dir = False
+            count = None
+
+            try:
+                # try enter directory
+                ftp.cwd(name)
+                is_dir = True
+
+                # count files inside directory
+                try:
+                    count = len([x for x in ftp.nlst() if x not in ('.', '..')])
+                except:
+                    count = 0
+
+                ftp.cwd(pwd)
+
+            except:
+                is_dir = False
+
+            items.append({
+                "name": name,
+                "is_dir": is_dir,
+                "count": count   # None for files
+            })
+
+        ftp.quit()
+
+        # ✅ directories first, A–Z
+        items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
+
+        return items
+
+    
+    data = {}
+    data['is_M1'] = bool(re.search('M1', device_sn))
+    data['files'] = get_ftp_files("/mainfile_M1")
+
+    return render_template('mx_mqtt.html', message=device_sn,topic=topic,cmd_on=cmd_on,cmd_off=cmd_off,cmd_check=cmd_check,data=data)
 
 
 @socketio.on('subscribe')
