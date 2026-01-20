@@ -1,61 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<!-- <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <title>MQTT</title>
-</head>
-<body>
-    <button onclick="window.location.href='/'">Home</button>
-    <a href="#" onclick="openVNC2()">Open VNC</a>
+</head> -->
+{% include 'a_top.html' %}
+<body style="padding:25px 35px 25px 35px;">
+    <!-- <button onclick="window.location.href='/'">Home</button> -->
+    <!-- <a href="#" onclick="openVNC2()">Open VNC</a> -->
     <!-- <a href="vnc://172.16.110.149:5800">Open RealVNC via vnc://</a>
     <a href="vnc://172.16.110.149:5900">Open VNC Viewer</a> -->
-    <a href="openvpn://connect?config=MyVPNConfig">Launch OpenVPN</a>
+    <!-- <a href="openvpn://connect?config=MyVPNConfig">Launch OpenVPN</a> -->
     
 
     <div style="display: flex;margin-bottom: 5px;">
-        <div style="margin-right: 5px;">Device_SN: {{message}}</div>
+        <div style="margin-right: 5px;">Device_SN: {{data['device_sn']}}</div>
     </div>
 
     <div class="hr-with-text">
         <span>Connect Step.</span>
     </div>
-    <div style="display: flex;margin-bottom: 5px;">
+    <div style="display: flex;align-items: center;margin-bottom: 5px;">
         <div>[step.1]</div>
-        <button onclick="subscribeTopic('meow/{{ message }}')" style="margin-right: 5px;">Subscribe</button>
-        <button onclick="unsubscribeTopic('meow/{{ message }}')" style="margin-right: 5px;">unSubscribe</button>
+        <button class="btn btn-success"  onclick="subscribeTopic('meow/{{ message }}')" style="margin-right: 5px;">Subscribe</button>
+        <button class="btn btn-warning"  onclick="unsubscribeTopic('meow/{{ message }}')" style="margin-right: 5px;">unSubscribe</button>
     </div>
     <hr>
-
-    <div style="display:flex;margin-bottom: 5px;">
+    {% if data['is_M1'] %}
+    <div style="display:flex;align-items: center;margin-bottom: 5px;">
         <div>[step.2]</div>
-        <button onclick="sendCMD('meow/{{ message }}','{{cmd_check}}')" style="margin-right: 5px;">VPN Check</button>
+        <button class="btn btn-dark" onclick="sendCMD('meow/{{ message }}','{{cmd_check}}')" style="margin-right: 5px;">VPN Check</button>
         <div> >> </div>
-        <button onclick="sendCMD('meow/{{ message }}','{{cmd_on}}')" style="margin-right: 5px;">VPN ON</button>
-        <button onclick="sendCMD('meow/{{ message }}','{{cmd_off}}')" style="margin-right: 5px;">VPN OFF</button>
+        <button class="btn btn-success" onclick="sendCMD('meow/{{ message }}','{{cmd_on}}')" style="margin-right: 5px;">VPN ON</button>
+        <button class="btn btn-warning" onclick="sendCMD('meow/{{ message }}','{{cmd_off}}')" style="margin-right: 5px;">VPN OFF</button>
     </div>
     <hr>
+    {% endif %}
 
-    <div style="display:flex;margin-bottom: 5px;">
+    <!-- <div style="display:flex;margin-bottom: 5px;">
         <div>[step.3]</div>
         <button onclick="connectVPN('')" style="margin-right: 5px;">connectVPN</button>
         <button onclick="closeVPN('')" style="margin-right: 5px;">closetVPN</button>
     </div>
-    <hr>
+    <hr> -->
 
     <div style="display:flex;font-size: 22px;margin-bottom: 5px;">
         <div style="font-weight: 700;">IP VPN:</div>
-        <div id="ip-vpn" style="font-weight: 500;"></div>
+        <div id="ip-vpn" style="font-weight: 500;">x.x.x.x</div>
         <button id="bt-ip-vpn" onclick="copyText('ip-vpn')" style="display:none;">Copy</button>
     </div>
-    <div style="display:flex;margin-bottom: 5px;">
+    <!-- <div style="display:flex;margin-bottom: 5px;">
         <div>[step.4]</div>
         <button onclick="openVNC('')" style="margin-right: 5px;">openVNC</button>
         <button onclick="openSSH('')" style="margin-right: 5px;">openSSH</button>
-    </div>
+    </div> -->
 
-    <div class="hr-with-text">
+    <!-- <div class="hr-with-text">
         <span>Test Beny EV RS-485.</span>
     </div>
     <div style="display:flex;margin-bottom: 5px;">
@@ -66,17 +69,20 @@
         <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"cmd\", \"data\":{\"EV000002\":{\"offset_time\":{\"read\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">test_BF002</button>
         <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"cmd\", \"data\":{\"EV000003\":{\"offset_time\":{\"read\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">test_BF003</button>
 
-    </div>
+    </div> -->
 
     <div class="hr-with-text">
         <span>Config</span>
     </div>
 
     <div style="display:flex;margin-bottom: 5px;">
-        <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"pm2restart\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Restart PM</button>
-        <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"restart\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Reboot M1</button>
+        {% if data['is_M1'] %}
+        <button class="btn btn-dark" onclick='testMSG("meow/{{ message }}","{ \"mode\": \"pm2restart\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Re-program</button>
+        {% endif %}
+        <button class="btn btn-dark" onclick='testMSG("meow/{{ message }}","{ \"mode\": \"restart\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Restart</button>
     </div> 
 
+    
     <div>
         <div></div>
     </div>
@@ -90,7 +96,45 @@
 
     <h1>Live Messages</h1>
     <ul id="messages">-</ul>
-    <hr>
+<!-- ////////////////////////////////////////////////////// -->
+
+    {% if data['is_M1'] %}
+    <div class="hr-with-text">
+        <span>Firmware Manage</span>
+    </div>
+    <div>
+        <title>FTP File List</title>
+        <h2>FTP Files</h2>
+        
+        <div class="file-list">
+            {% for file in data['files'] %}
+                {% if file != '.' and file != '..' %}
+            <div class="file-card">
+                <span class="file-icon">{{ '📁' if file.is_dir else '📄' }}</span>
+                <span class="file-name" {% if file.is_dir %} ondblclick="openDir('{{ file.name }}')" {% endif %}>{{ file.name }}</span>
+                <span class="file-actions">
+                {% if not file.is_dir%}
+                <button onclick="previewFTP('{{ file.name }}')">👁</button>
+                <button onclick="deleteFTP('{{ file.name }}')">🗑</button>
+                {% endif %}
+                {% if file.is_dir%}
+                <div>{{file.count}}+</div>
+                {% endif %}
+
+                </span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+    </div>
+    
+    <div style="display:flex;margin-bottom: 5px;">
+        <button class="btn btn-primary" onclick='testMSG("meow/{{ message }}","{ \"mode\": \"uploadfile\", \"data\":{\"src\":\"/py_multi.py\",\"dst\":\"/mainfile_M1/zx_py_multi.py\"}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">upload to server</button>
+        <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"cmd\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">cmd</button>
+    </div> 
+    {% endif %}
+    
 
     <script>
         const socket = io();
@@ -142,9 +186,24 @@
         function testMSG(topic,cmd) {
             // e.preventDefault();
             // const topic = document.getElementById("subTopic").value;
-            console.log(topic,cmd);
+            // console.log(topic,cmd);
             
-            socket.emit('testMSG', { send_topic:topic,send_message:cmd });
+            // socket.emit('testMSG', { send_topic:topic,send_message:cmd });
+            Swal.fire({
+                title: 'Upload Main file?',
+                text: '',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, upload',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#084298'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    console.log(topic,cmd);
+                    socket.emit('testMSG', { send_topic:topic,send_message:cmd });
+                    setTimeout(() => location.reload(), 1200);
+                }
+            });
         }
         function connectVPN(cmd) {
             // e.preventDefault();
@@ -160,12 +219,6 @@
             
             socket.emit('closeVPN', { send_message:ip_vpn });
         }
-        // function openVNC2() {
-        //     window.location = 'vnc://172.16.110.149';
-        //     setTimeout(() => {
-        //         window.location = 'https://apps.apple.com/app/realvnc-viewer/id352019548';
-        //     }, 2000); // fallback to App Store after 2s
-        // }
         function openVNC2() {
             // const ip = '172.16.110.149'; // Change to your target IP or hostname
             const ip = ip_vpn; // Change to your target IP or hostname
@@ -206,7 +259,6 @@
             // }
         
         }
-
         function copyText(id) {
             const text = document.getElementById(id).textContent;
             if(text){
@@ -289,6 +341,78 @@
         });
 
     </script>
+    
+    <script>
+        function openDir(_dir) {
+            // window.location.href = `/browse/${_dir}`;
+            // socket.emit('openDir', { dir:_dir });
+            console.log(_dir);
+
+            
+        }
+        function previewFTP(filename) {
+            fetch(`/ftp_py/${filename}`)
+                .then(r => r.text())
+                .then(text => {
+                    Swal.fire({
+                        title: filename,
+                        width: '85%',
+                        showCloseButton: true,
+                        focusConfirm: false,
+                        html: `
+                            <pre id="swal-code" style="
+                                text-align:left;
+                                max-height:60vh;
+                                overflow:auto;
+                                background:#1e1e1e;
+                                color:#d4d4d4;
+                                padding:12px;
+                                border-radius:6px;
+                            "></pre>
+                        `,
+                        didOpen: () => {
+                            document.getElementById('swal-code').textContent = text;
+                        }
+                    });
+                });
+        }
+        function deleteFTP(filename) {
+            Swal.fire({
+                title: 'Delete file?',
+                text: filename,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#d33'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/ftp_delete/${filename}`, {
+                        method: 'DELETE'
+                    })
+                    .then(res => {
+                        if (!res.ok) throw new Error();
+                        return res.json();
+                    })
+                    .then(() => {
+                        Swal.fire({
+                            title: 'Deleted!',
+                            text: filename + ' removed.',
+                            icon: 'success',
+                            timer: 1200,
+                            showConfirmButton: false
+                        });
+
+                        setTimeout(() => location.reload(), 1200);
+                    })
+                    .catch(() => {
+                        Swal.fire('Error', 'Failed to delete file', 'error');
+                    });
+                }
+            });
+        }
+    </script>
+
     <style>
         .hr-with-text {
             display: flex;
@@ -309,6 +433,80 @@
             font-weight: bold;
             color: #444;
         }
+
+    </style>
+
+    <style>
+        .file-list {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 10px;
+        }
+
+        /* 📱 Mobile */
+        @media (max-width: 767px) {
+        .file-list {
+            grid-template-columns: 1fr;
+        }
+        }
+
+        /* 📲 Tablet */
+        @media (min-width: 768px) and (max-width: 1023px) {
+        .file-list {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        }
+
+        /* 💻 Desktop */
+        @media (min-width: 1024px) {
+        .file-list {
+            grid-template-columns: repeat(6, 1fr);
+        }
+        }
+
+        /* File card */
+        .file-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        transition: box-shadow 0.2s;
+        }
+
+        .file-card:hover {
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        }
+
+        .file-icon {
+        font-size: 22px;
+        }
+
+        .file-name {
+        flex: 1;
+        font-size: 14px;
+        color: #1a73e8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        }
+
+        .file-actions {
+        display: flex;
+        gap: 6px;
+        }
+
+        .file-actions button {
+        border: none;
+        background: none;
+        font-size: 18px;
+        cursor: pointer;
+        }
+
+
     </style>
 </body>
 
