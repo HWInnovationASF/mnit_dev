@@ -1,71 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Flask WebRTC Video Call</title>
-  <style>
-    video { width: 45%; margin: 5px; border: 1px solid #ccc; }
-    body { font-family: Arial, sans-serif; text-align: center; }
-  </style>
+  <title>WebRTC with Flask</title>
+  <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
 </head>
 <body>
-  <h2>Flask WebRTC Video Call</h2>
+  <h1>WebRTC Video Chat</h1>
+  <video id="local" autoplay muted playsinline></video>
+  <video id="remote" autoplay playsinline></video>
 
-  <input id="roomInput" placeholder="Enter room name" />
-  <button onclick="joinRoom()">Join Room</button>
-
-  <div>
-    <video id="localVideo" autoplay muted></video>
-    <video id="remoteVideo" autoplay></video>
-  </div>
-
-  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   <script>
     const socket = io();
-    let room = '';
-    let localStream;
+
     const peer = new RTCPeerConnection();
 
-    async function getMedia() {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      document.getElementById('localVideo').srcObject = localStream;
-      localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
-    }
-
-    async function joinRoom() {
-      room = document.getElementById('roomInput').value;
-      if (!room) return alert('Enter a room name');
-      socket.emit('join', room);
-      await getMedia();
-
-      const offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-      socket.emit('offer', { room, offer });
-    }
-
-    socket.on('offer', async ({ offer }) => {
-      if (!localStream) await getMedia();
-      await peer.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await peer.createAnswer();
-      await peer.setLocalDescription(answer);
-      socket.emit('answer', { room, answer });
-    });
-
-    socket.on('answer', async ({ answer }) => {
-      await peer.setRemoteDescription(new RTCSessionDescription(answer));
-    });
-
-    peer.ontrack = event => {
-      document.getElementById('remoteVideo').srcObject = event.streams[0];
-    };
+    // Get media
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        document.getElementById('local').srcObject = stream;
+        stream.getTracks().forEach(track => peer.addTrack(track, stream));
+        return peer.createOffer();
+      })
+      .then(offer => {
+        return peer.setLocalDescription(offer);
+      })
+      .then(() => {
+        socket.emit('offer', peer.localDescription);
+      });
 
     peer.onicecandidate = event => {
       if (event.candidate) {
-        socket.emit('ice-candidate', { room, candidate: event.candidate });
+        socket.emit('ice-candidate', event.candidate);
       }
     };
 
-    socket.on('ice-candidate', ({ candidate }) => {
-      peer.addIceCandidate(new RTCIceCandidate(candidate));
+    peer.ontrack = event => {
+      document.getElementById('remote').srcObject = event.streams[0];
+    };
+
+    socket.on('offer', async (offer) => {
+      await peer.setRemoteDescription(new RTCSessionDescription(offer));
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      stream.getTracks().forEach(track => peer.addTrack(track, stream));
+      document.getElementById('local').srcObject = stream;
+
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+      socket.emit('answer', answer);
+    });
+
+    socket.on('answer', async (answer) => {
+      await peer.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    socket.on('ice-candidate', async (candidate) => {
+      await peer.addIceCandidate(new RTCIceCandidate(candidate));
     });
   </script>
 </body>

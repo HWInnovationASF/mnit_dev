@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <!-- Default page title (can be overridden) -->
+  <title>{% block title %}My Flask App{% endblock %}</title>
+
+  <!-- Global CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <!-- Global meta / fonts / favicon -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+  <!-- Extra per-page head content -->
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+  {% block content %}{% endblock %}
+
+  <!-- Global scripts -->
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
