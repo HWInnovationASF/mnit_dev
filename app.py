@@ -2,7 +2,7 @@ import eventlet
 import asyncio
 
 # import eventlet.hubs
-# eventlet.monkey_patch()  # patch for eventlet async support
+eventlet.monkey_patch()  # patch for eventlet async support
 # eventlet.hubs.use_hub("eventlet.hubs.asyncio")
 from flask import Flask, g, render_template, request, jsonify ,abort,Response
 
