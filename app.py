@@ -1,11 +1,12 @@
-import eventlet 
+# import eventlet
+import asyncio
 
 # import eventlet.hubs
-eventlet.monkey_patch()  # patch for eventlet async support
+# eventlet.monkey_patch()  # patch for eventlet async support
 # eventlet.hubs.use_hub("eventlet.hubs.asyncio")
 from flask import Flask, g, render_template, request, jsonify ,abort,Response
 
-eventlet.monkey_patch()  # patch for eventlet async support
+# eventlet.monkey_patch()  # patch for eventlet async support
 # import eventlet.hubs
 # eventlet.hubs.use_hub("eventlet.hubs.asyncio")
 from flask import Flask, g, render_template, request, jsonify 
@@ -49,17 +50,19 @@ mqtt = Mqtt(app)
 
 # Subscribe topic
 SUBSCRIBE_TOPIC = 'meow/test_sub'
-socketio = SocketIO(app, cors_allowed_origins='*')
+# socketio = SocketIO(app, cors_allowed_origins='*')
+socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
 
 messages = []
 subscribed_topics = set()
 
+
 def connect_db():
     return pymysql.connect(
-        host=os.getenv('FTP_HOST') ,
+        host=os.getenv('db_host') ,
         user=os.getenv('db_user') ,
         password=os.getenv('db_pass'),
-        db='mdbiot_com',
+        db='',
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True
     )
@@ -126,19 +129,19 @@ def handle_home():
     return render_template('welcome.html')
     # return render_template('template1.html')
 
-@app.route('/debug')
-def handle_debug():
-    # print("===={}".format(clean))
-    clean = ''
-    cursor = get_cursor()
-    cursor.execute("SELECT device_SN,DT,TS_last,WSData FROM device_status WHERE device_SN LIKE '{}%' ".format(clean))
-    result = cursor.fetchall()
-    d_arr = [item['device_SN']  for item  in result]
-    pattern = r'^{}'.format(clean)  # regex: start with M1
-    # print(sorted_people.)
-    matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
-    sorted_people = sorted(result, key=lambda person: person["device_SN"])
-    return render_template('template1.html',data = matched_sns,data_arr=sorted_people )
+# @app.route('/debug')
+# def handle_debug():
+#     # print("===={}".format(clean))
+#     clean = ''
+#     cursor = get_cursor()
+#     cursor.execute("SELECT device_SN,DT,TS_last,WSData FROM mdbiot.device_list WHERE device_SN LIKE '{}%' ".format(clean))
+#     result = cursor.fetchall()
+#     d_arr = [item['device_SN']  for item  in result]
+#     pattern = r'^{}'.format(clean)  # regex: start with M1
+#     # print(sorted_people.)
+#     matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
+#     sorted_people = sorted(result, key=lambda person: person["device_SN"])
+#     return render_template('template1.html',data = matched_sns,data_arr=sorted_people )
 
 @app.route('/debug/<path:anything>')
 def handle_anything(anything):
@@ -148,24 +151,31 @@ def handle_anything(anything):
         # with connection.cursor() as cursor:
         clean = (anything.strip('/debug/')).upper() if anything.upper() != 'ALL' else ''
         if anything == 'ALL':
-            sql = "SELECT * FROM device_status WHERE 1"
+            # sql = "SELECT device_SN,Info FROM mdbiot.device_list WHERE 1"
+            sql = "SELECT d.device_SN, JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list AS d LEFT JOIN mdbiot.projectdevice_list AS pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list AS p ON pd.PID = p.PID GROUP BY d.device_SN;"
         else:
-            sql = "SELECT * FROM device_status WHERE device_SN LIKE '{}%'".format(clean)
+            # sql = "SELECT device_SN,Info FROM mdbiot.device_list WHERE device_SN LIKE '{}%'".format(clean)
+            sql = "SELECT d.device_SN,JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list d LEFT JOIN mdbiot.projectdevice_list pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list p ON pd.PID = p.PID WHERE d.device_SN LIKE '{}%' GROUP BY d.device_SN;".format(clean)
 
-        print(sql)
+        # print(sql)
         cursor = get_cursor()
         cursor.execute("{}".format(sql))
         result = cursor.fetchall()
         d_arr = [item['device_SN']  for item  in result]
-
+        # print(result)
         
-        if clean in ['M1','RL','SI','IR','']:
+        if clean in ['M1','RL','SI','IR','SQ','S1','']:
             # Filter values starting with "M1"
             pattern = r'^{}'.format(clean)  # regex: start with M1
             # print(sorted_people.)
+            # print(pattern)
             matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
             sorted_people = sorted(result, key=lambda person: person["device_SN"])
-            return render_template('template1.html',data = matched_sns,data_arr=sorted_people )
+            data = {}
+            data['data'] = [sn for sn in d_arr if re.match(pattern, sn)]
+            data['data_arr'] = sorted(result, key=lambda person: person["device_SN"])
+            # print( data['data_arr'] )
+            return render_template('template1.html',data = data)
         else:
             return render_template('template1.html') 
 
@@ -272,21 +282,8 @@ def mx_config():
     if request.method == 'POST':
         data = request.get_json()
         subTopic = data.get("subTopic")
-        print(data) 
-    topic = request.form.get('topic')
-    device_sn = request.args.get('device_sn')
-    cmd_on = '{ "mode": "cmd", "data":{"VPN":1}, "cmd_id": "C1728370820091" }'
-    cmd_off = '{ "mode": "cmd", "data":{"VPN":0}, "cmd_id": "C1728370820091" }'
-    cmd_check = '{ "mode": "cmd", "data":{"VPN":2}, "cmd_id": "C1728370820091" }'
-   
-    # def get_ftp_files():
-    #     FTP_DIR  = "/mainfile_M1"   # directory to list
-    #     ftp = FTP(FTP_HOST)
-    #     ftp.login(FTP_USER, FTP_PASS)
-    #     ftp.cwd(FTP_DIR)
-    #     files = ftp.nlst()
-    #     ftp.quit()
-    #     return files
+        # print(data) 
+
     def get_ftp_files(_DIR):
         # FTP_DIR = "/mainfile_M1"
 
@@ -334,12 +331,16 @@ def mx_config():
 
         return items
 
-    
     data = {}
-    data['is_M1'] = bool(re.search('M1', device_sn))
-    data['files'] = get_ftp_files("/mainfile_M1")
+    data['device_sn']   = request.args.get('device_sn')
+    data['is_M1']       = bool(re.search('M1', data['device_sn']))
+    data['files']       = get_ftp_files("/mainfile_M1")
+    data['topic']       = request.form.get('topic')
+    data['cmd_on']      = '{ "mode": "cmd", "data":{"VPN":1}, "cmd_id": "C1728370820091" }'
+    data['cmd_off']     = '{ "mode": "cmd", "data":{"VPN":0}, "cmd_id": "C1728370820091" }'
+    data['cmd_check']   = '{ "mode": "cmd", "data":{"VPN":2}, "cmd_id": "C1728370820091" }'
 
-    return render_template('mx_mqtt.html', message=device_sn,topic=topic,cmd_on=cmd_on,cmd_off=cmd_off,cmd_check=cmd_check,data=data)
+    return render_template('mx_mqtt.html', data=data)
 
 
 @socketio.on('subscribe')
