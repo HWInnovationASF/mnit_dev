@@ -226,36 +226,6 @@ def handle_anything(anything):
         data['data'] = [sn for sn in d_arr if re.match(pattern, sn)]
         data['data_arr'] = sorted(result, key=lambda person: person["device_SN"])
         return render_template('template1.html',data = data)
-
-            # sql = "SELECT device_SN,Info FROM mdbiot.device_list WHERE 1"
-            sql = "SELECT d.device_SN, JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list AS d LEFT JOIN mdbiot.projectdevice_list AS pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list AS p ON pd.PID = p.PID GROUP BY d.device_SN;"
-        else:
-            # sql = "SELECT device_SN,Info FROM mdbiot.device_list WHERE device_SN LIKE '{}%'".format(clean)
-            sql = "SELECT d.device_SN,JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list d LEFT JOIN mdbiot.projectdevice_list pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list p ON pd.PID = p.PID WHERE d.device_SN LIKE '{}%' GROUP BY d.device_SN;".format(clean)
-
-        # print(sql)
-        cursor = get_cursor()
-        cursor.execute("{}".format(sql))
-        result = cursor.fetchall()
-        d_arr = [item['device_SN']  for item  in result]
-        # print(result)
-        
-        if clean in ['M1','RL','SI','IR','SQ','S1','']:
-            # Filter values starting with "M1"
-            pattern = r'^{}'.format(clean)  # regex: start with M1
-            # print(sorted_people.)
-            # print(pattern)
-            matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
-            sorted_people = sorted(result, key=lambda person: person["device_SN"])
-            data = {}
-            data['data'] = [sn for sn in d_arr if re.match(pattern, sn)]
-            data['data_arr'] = sorted(result, key=lambda person: person["device_SN"])
-            # print( data['data_arr'] )
-            return render_template('template1.html',data = data)
-        else:
-            return render_template('template1.html') 
-
-
     except Exception as e:
         print('Except as {}'.format(e))
         return render_template('template1.html') 
