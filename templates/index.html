@@ -1,193 +1,161 @@
-<!doctype html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MQTT + SocketIO</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap JS Bundle (includes Popper) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-    
-</head>
-<body style="padding: 15px;">
-
-            
-    <div style="margin-bottom: 5px;margin-top: 5px;">
-        <div>
-            <button class="btn btn-primary" onclick="window.location.href='/debug/M1'" style="min-width: 75px;">M1</button>
-            <button class="btn btn-primary" onclick="window.location.href='/debug/SQ'" style="min-width: 75px;">SQ</button>
-            <button class="btn btn-primary"onclick="window.location.href='/debug/RL'" style="min-width: 75px;">RL</button>
-            <button class="btn btn-primary" onclick="window.location.href='/debug/SI'" style="min-width: 75px;">SI</button>
-            <button class="btn btn-primary" onclick="window.location.href='/debug/IR'" style="min-width: 75px;">IR</button>
-            <button class="btn btn-primary" onclick="window.location.href='/debug/ALL'" style="min-width: 75px;">ALL</button>
+<div class="mon-panel">
+    <div class="mon-panel-header">
+        <div class="mon-quicklinks">
+            <a href="/debug/M1" class="btn btn-outline-primary btn-sm">M1</a>
+            <a href="/debug/S1" class="btn btn-outline-primary btn-sm">S1</a>
+            <a href="/debug/RL" class="btn btn-outline-primary btn-sm">RL</a>
+            <a href="/debug/SI" class="btn btn-outline-primary btn-sm">SI</a>
+            <a href="/debug/IR" class="btn btn-outline-primary btn-sm">IR</a>
+            <a href="/debug/ALL" class="btn btn-primary btn-sm">ALL</a>
+        </div>
+        <div class="mon-quicklinks">
+            <button class="btn btn-warning btn-sm" onclick="subscribeTopic('meow/#')"><i class="fa-solid fa-play"></i> Debug</button>
+            <button class="btn btn-outline-danger btn-sm" onclick="unsubscribeTopic('meow/#')"><i class="fa-solid fa-stop"></i> Stop</button>
+            <input type="text" class="form-control form-control-sm" name="searchInput" id="searchInput" onkeyup="filterTable()" placeholder="Search device..." style="width:200px;">
         </div>
     </div>
-
-    <div style="display: flex;align-items: center;justify-content: space-between;">
-        <div>
-            <button class="btn btn-warning" onclick="subscribeTopic('meow/#')" style="min-width: 75px;">Debug</button>
-            <button class="btn btn-danger" onclick="unsubscribeTopic('meow/#')" style="min-width: 75px;">Stop</button>
-        </div>
-        <div style="display: flex;align-items: center;margin-top: 5px;">
-            <label for="searchInput">Search:</label>&nbsp;
-            <input type="text" class="form-control" name="searchInput" id="searchInput" onkeyup="filterTable()" placeholder="Search table...">
-        </div>
-    </div>
-    <!-- <div style="display:flex;flex-direction: column;align-items: center;">
-        {% for device_sn in data %}
-        <div style="display:flex;">
-            <input type="text" id="device_sn" value="{{ device_sn }}" disabled>
-            <button onclick="window.location.href='/mqtt?device_sn={{ device_sn }}'">MQTT</button>
-            <button onclick="linkpagr('vpn','{{ device_sn }}')">VPN</button>
-        </div>
-        {% endfor  %}
-    </div> -->
-    <!-- <div style="margin-top: 5px;">
-        <input type="text" class="form control" id="searchInput" onkeyup="filterTable()" placeholder="Search table...">
-    </div> -->
-    <div style="overflow-y: scroll;">
-        <table class="styled-table" id="myTable">
-            <tr>
-                <th>status</th>
-                <th>device_SN</th>
-                <th>DT</th>
-                <!-- <th>TS_last</th> -->
-                <th>WSData</th>
-                <th>Toolkit</th>
-            </tr>
-            {% for data_k in data_arr %}
+    <div class="mon-panel-body">
+        <div id="deviceList">
+            {% for data_k in data.data_arr %}
             {% if data_k.device_SN%}
-            <tr>
-                <td><div style="width:35px;"><div class="status-dev-{{ data_k.device_SN }}" style="width:25px;height:25px;border-radius:50%;background-color: #ddd;"></div></div></td>
-                <td>{{data_k.device_SN}}</td>
-                <td>{{data_k.DT}}</td>
-                <!-- <td>{{data_k.TS_last}}</td> -->
-                <td><textarea class="form-control" name="" id="" style="width:100%;height:20px;">{{data_k.WSData}}</textarea></td>
-                <td>
-                    <input type="hidden" id="device_sn" value="{{ data_k.device_SN }}" disabled>
-                    <button class="btn btn-primary" onclick="window.location.href='/mqtt?device_sn={{ data_k.device_SN }}'">MQTT</button>
-                    <!-- <button onclick="linkpagr('mqtt','{{ device_sn }}')">MQTT</button> -->
-                    <!-- <button class="btn btn-primary" onclick="linkpagr('vpn','{{ data_k.device_SN }}')">VPN</button> -->
-                    <button class="btn btn-primary" onclick="window.location.href='/dashboard?device_sn={{ data_k.device_SN }}'">Dashboard</button>
-                    <button class="btn btn-primary" onclick="window.location.href='/config?device_sn={{ data_k.device_SN }}'">Config</button>
-
-                </td>
-            </tr>
-
+            <div class="mon-device-row" data-search="{{ data_k.device_SN }} {{ data_k.ProjectName }} {{ data_k.Name }}">
+                <div class="mon-device-main">
+                    <div class="status-dev-{{ data_k.device_SN }} mon-device-dot"></div>
+                    <div class="mon-device-info">
+                        <div class="mon-device-sn">{{ data_k.device_SN }}</div>
+                        <div class="mon-device-sub">{{ data_k.Name or '-' }} &middot; {{ data_k.ProjectName or '-' }}</div>
+                    </div>
+                </div>
+                <div class="mon-device-actions">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleData(this)">Data</button>
+                    <a class="btn btn-sm btn-primary" href="/mqtt?device_sn={{ data_k.device_SN }}">MQTT</a>
+                    <a class="btn btn-sm btn-primary" href="/dashboard?device_sn={{ data_k.device_SN }}">Dashboard</a>
+                    <a class="btn btn-sm btn-primary" href="/config?device_sn={{ data_k.device_SN }}">Config</a>
+                </div>
+            </div>
+            <div class="mon-device-data" style="display:none;">
+                <textarea class="form-control" readonly>{{ data_k.WSData }}</textarea>
+            </div>
             {% endif  %}
             {% endfor  %}
-                
-        </table>
+
+            {% if not data.data_arr %}
+            <div class="mon-empty">
+                <i class="fa-solid fa-satellite-dish"></i>
+                <p>No devices found</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
-    
+</div>
 
-    <!-- <h1>MQTT messages (real-time)</h1>
-    <ul id="messages"></ul> -->
-    <script>
-        let socket = io();
+<script>
+    let socket = io();
 
-        function linkpagr(page,device_sn) {
-            fetch('/mqtt', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ device_sn: device_sn })
-            })
-            .then(response => {
-                if (response.ok) {
-                    // Redirect to another page after success
-                    // window.location.href = "/pg"+page;
-                } else {
-                    console.error('POST failed');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
-        function subscribeTopic(topic) {
-            // e.preventDefault();
-            // const topic = document.getElementById("subTopic").value;
-            console.log(topic);
-            
-            socket.emit('subscribe', { topic });
-        }
-        function unsubscribeTopic(topic) {
-            // e.preventDefault();
-            // const topic = document.getElementById("subTopic").value;
-            console.log(topic);
-            
-            socket.emit('unsubscribe', { topic });
-        }
+    function subscribeTopic(topic) {
+        console.log(topic);
+        socket.emit('subscribe', { topic });
+    }
+    function unsubscribeTopic(topic) {
+        console.log(topic);
+        socket.emit('unsubscribe', { topic });
+    }
 
+    function toggleData(btn){
+        let dataDiv = btn.closest('.mon-device-row').nextElementSibling;
+        dataDiv.style.display = dataDiv.style.display === 'none' ? 'block' : 'none';
+    }
 
-        function filterTable() {
-            const input = document.getElementById("searchInput");
-            const filter = input.value.toLowerCase();
-            const table = document.getElementById("myTable");
-            const tr = table.getElementsByTagName("tr");
-
-            for (let i = 1; i < tr.length; i++) { // start at 1 to skip header
-                let row = tr[i];
-                let text = row.textContent || row.innerText;
-                row.style.display = text.toLowerCase().includes(filter) ? "" : "none";
-            }
-        }
-
-        socket.on('mqtt_message', data => {
-            // const messagesDiv = document.getElementById("messages");
-            // const line = document.createElement("p");
-            // line.textContent = `[${data.topic}] ${data.message}`;
-            // messagesDiv.appendChild(line);
-            // messagesDiv.innerHTML = `[${data.topic}] ${data.message}`;
-            // console.log(data.message);
-            let msg_arr = JSON.parse(data.message);
-            let res_ts = msg_arr.ts
-            let device_SN = msg_arr.device_SN
-            console.log(typeof(msg_arr),res_ts,device_SN);
-
-            const status_dev = document.querySelector(".status-dev-"+device_SN);
-            // const line = document.createElement("div");
-            // status_dev.innerHTML = `ON`;
-            if(status_dev){
-                status_dev.innerHTML = '<div style="width:25px;height:25px;border-radius:50%;background-color: #00ff00;"></div>';
-            }
-
-            
-            
-            
+    function filterTable() {
+        const filter = document.getElementById("searchInput").value.toLowerCase();
+        document.querySelectorAll('.mon-device-row').forEach(function(row){
+            let match = row.getAttribute('data-search').toLowerCase().includes(filter);
+            row.style.display = match ? '' : 'none';
+            row.nextElementSibling.style.display = match ? row.nextElementSibling.style.display : 'none';
         });
-    </script>
+    }
 
-    <style>
-        .styled-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            font-size: 16px;
-            text-align: left;
+    socket.on('mqtt_message', data => {
+        let msg_arr = JSON.parse(data.message);
+        let device_SN = msg_arr.device_SN
+        console.log(device_SN);
+
+        const status_dev = document.querySelector(".status-dev-"+device_SN);
+        if(status_dev){
+            status_dev.classList.add('mon-device-dot-online');
         }
+    });
+</script>
 
-        .styled-table th,
-        .styled-table td {
-            padding: 8px 10px;
-            border: 1px solid #ddd;
-            text-wrap: nowrap;
-        }
-
-        .styled-table thead {
-            background-color: #009879;
-            color: #ffffff;
-        }
-
-        .styled-table tbody tr:nth-child(even) {
-            background-color: #f3f3f3;
-        }
-
-        .styled-table tbody tr:hover {
-            background-color: #f1f1f1;
-        }
-    </style>
-
-
-</body>
-</html>
+<style>
+    .mon-quicklinks{
+        display:flex;
+        align-items:center;
+        gap:6px;
+        flex-wrap:wrap;
+    }
+    .mon-device-row{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:14px;
+        flex-wrap:wrap;
+        padding:12px 6px;
+        border-bottom:1px solid #eef1f6;
+    }
+    .mon-device-row:hover{
+        background:#f8f9fc;
+    }
+    .mon-device-main{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        min-width:220px;
+    }
+    .mon-device-dot{
+        width:12px;
+        height:12px;
+        border-radius:50%;
+        background:#d9dee8;
+        flex:0 0 auto;
+    }
+    .mon-device-dot-online{
+        background:#1aab63;
+    }
+    .mon-device-sn{
+        font-weight:700;
+        color:#1a2b4c;
+    }
+    .mon-device-sub{
+        font-size:0.82rem;
+        color:#6b7a99;
+    }
+    .mon-device-actions{
+        display:flex;
+        align-items:center;
+        gap:6px;
+        flex-wrap:wrap;
+    }
+    .mon-device-data{
+        padding:0 6px 12px 38px;
+        border-bottom:1px solid #eef1f6;
+    }
+    .mon-device-data textarea{
+        width:100%;
+        height:60px;
+        font-size:0.82rem;
+        background:#f8f9fc;
+    }
+    .mon-empty{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        color:#9aa7c2;
+        padding:40px 0;
+    }
+    .mon-empty i{
+        font-size:2.4rem;
+        margin-bottom:10px;
+    }
+</style>

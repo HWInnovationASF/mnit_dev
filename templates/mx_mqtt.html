@@ -17,7 +17,7 @@
     
 
     <div style="display: flex;margin-bottom: 5px;">
-        <div style="margin-right: 5px;">Device_SN: {{data['device_sn']}}</div>
+        <div style="margin-right: 5px;">Device_SN: {{ data['device_sn'] }}</div>
     </div>
 
     <div class="hr-with-text">
@@ -25,17 +25,17 @@
     </div>
     <div style="display: flex;align-items: center;margin-bottom: 5px;">
         <div>[step.1]</div>
-        <button class="btn btn-success"  onclick="subscribeTopic('meow/{{ message }}')" style="margin-right: 5px;">Subscribe</button>
-        <button class="btn btn-warning"  onclick="unsubscribeTopic('meow/{{ message }}')" style="margin-right: 5px;">unSubscribe</button>
+        <button class="btn btn-success"  onclick="subscribeTopic('meow/{{ data.device_sn }}')" style="margin-right: 5px;">Subscribe</button>
+        <button class="btn btn-warning"  onclick="unsubscribeTopic('meow/{{ data.device_sn }}')" style="margin-right: 5px;">unSubscribe</button>
     </div>
     <hr>
     {% if data['is_M1'] %}
     <div style="display:flex;align-items: center;margin-bottom: 5px;">
         <div>[step.2]</div>
-        <button class="btn btn-dark" onclick="sendCMD('meow/{{ message }}','{{cmd_check}}')" style="margin-right: 5px;">VPN Check</button>
+        <button class="btn btn-dark" onclick="sendCMD('meow/{{ data.device_sn }}','{{ data.cmd_check }}')" style="margin-right: 5px;">VPN Check</button>
         <div> >> </div>
-        <button class="btn btn-success" onclick="sendCMD('meow/{{ message }}','{{cmd_on}}')" style="margin-right: 5px;">VPN ON</button>
-        <button class="btn btn-warning" onclick="sendCMD('meow/{{ message }}','{{cmd_off}}')" style="margin-right: 5px;">VPN OFF</button>
+        <button class="btn btn-success" onclick="sendCMD('meow/{{ data.device_sn }}','{{ data.cmd_on }}')" style="margin-right: 5px;">VPN ON</button>
+        <button class="btn btn-warning" onclick="sendCMD('meow/{{ data.device_sn }}','{{ data.cmd_off }}')" style="margin-right: 5px;">VPN OFF</button>
     </div>
     <hr>
     {% endif %}
@@ -52,24 +52,6 @@
         <div id="ip-vpn" style="font-weight: 500;">x.x.x.x</div>
         <button id="bt-ip-vpn" onclick="copyText('ip-vpn')" style="display:none;">Copy</button>
     </div>
-    <!-- <div style="display:flex;margin-bottom: 5px;">
-        <div>[step.4]</div>
-        <button onclick="openVNC('')" style="margin-right: 5px;">openVNC</button>
-        <button onclick="openSSH('')" style="margin-right: 5px;">openSSH</button>
-    </div> -->
-
-    <!-- <div class="hr-with-text">
-        <span>Test Beny EV RS-485.</span>
-    </div>
-    <div style="display:flex;margin-bottom: 5px;">
-        <div>[step.5]</div>
-        <button onclick="subscribeTopic('res/{{ message }}')" style="margin-right: 5px;">res/ Subscribe</button>
-    </div>
-    <div style="display:flex;margin-bottom: 5px;">
-        <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"cmd\", \"data\":{\"EV000002\":{\"offset_time\":{\"read\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">test_BF002</button>
-        <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"cmd\", \"data\":{\"EV000003\":{\"offset_time\":{\"read\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">test_BF003</button>
-
-    </div> -->
 
     <div class="hr-with-text">
         <span>Config</span>
@@ -77,15 +59,72 @@
 
     <div style="display:flex;margin-bottom: 5px;">
         {% if data['is_M1'] %}
-        <button class="btn btn-dark" onclick='testMSG("meow/{{ message }}","{ \"mode\": \"pm2restart\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Re-program</button>
+        <!-- <button class="btn btn-dark" onclick='testMSG("meow/{{ data.device_sn }}","{ \"mode\": \"pm2restart\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Re-program</button> -->
         {% endif %}
-        <button class="btn btn-dark" onclick='testMSG("meow/{{ message }}","{ \"mode\": \"restart\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Restart</button>
+        <button class="btn btn-dark" onclick='testMSG("meow/{{ data.device_sn }}","{ \"mode\": \"restart\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Reboot</button>
     </div> 
 
+    {% if False %}
+    <div class="hr-with-text">
+        <span>Test Fire</span>
+    </div>
+
+    <div style="display:flex;margin-bottom: 5px;">
+        {% if data['is_M1'] %}
+        <div style="border-right:2px solid #000000;margin-right:10px;">
+            <h1>RL1</h1>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL1\":{\"write\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 1</button>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL1\":{\"write\":2}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 2</button>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL1\":{\"write\":3}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 3</button>
+        </div>
+
+        <div style="border-right:2px solid #000000;margin-right:10px;">
+            <h1>RL2</h1>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL2\":{\"write\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 1</button>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL2\":{\"write\":2}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 2</button>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL2\":{\"write\":3}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 3</button>
+        </div>
+
+        <div style="border-right:2px solid #000000;margin-right:10px;">
+            <h1>RL3</h1>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL3\":{\"write\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 1</button>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL3\":{\"write\":2}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 2</button>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL3\":{\"write\":3}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 3</button>
+        </div>
+
+        <div style="border-right:2px solid #000000;margin-right:10px;">
+            <h1>RL4</h1>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL4\":{\"write\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 1</button>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL4\":{\"write\":2}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 2</button>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL4\":{\"write\":3}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send 3</button>
+        </div>
+        
+        
+        {% endif %}
+        
+    </div> 
+        <hr>
+        <div>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"delay\":{\"write\":60}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Delay 1</button>
+
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"restart\":{\"write\":999}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Restart</button>
+
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL1\":{\"write\":2},\"RL2\":{\"write\":2},\"RL3\":{\"write\":2},\"RL4\":{\"write\":2}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send ALL</button>
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL1\":{\"write\":1},\"RL2\":{\"write\":1},\"RL3\":{\"write\":1},\"RL4\":{\"write\":1}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Close ALL</button>
+
+            <!-- ////////// -->
+            <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"color_RL1\":{\"write\":2},\"color_RL2\":{\"write\":2},\"color_RL3\":{\"write\":2},\"color_RL4\":{\"write\":2}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Color RL1</button>
+
+
+            <!-- <button class="btn btn-dark" onclick='testMSG2("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{\"RL000001\":{\"RL1\":{\"write\":2},\"RL2\":{\"write\":2},\"RL3\":{\"write\":2},\"RL4\":{\"write\":2}}}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">Send ALL</button> -->
+
+        </div>
     
     <div>
         <div></div>
     </div>
+    {% endif %}
+
     <hr>
 
     
@@ -130,8 +169,8 @@
     </div>
     
     <div style="display:flex;margin-bottom: 5px;">
-        <button class="btn btn-primary" onclick='testMSG("meow/{{ message }}","{ \"mode\": \"uploadfile\", \"data\":{\"src\":\"/py_multi.py\",\"dst\":\"/mainfile_M1/zx_py_multi.py\"}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">upload to server</button>
-        <button onclick='testMSG("meow/{{ message }}","{ \"mode\": \"cmd\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">cmd</button>
+        <button class="btn btn-primary" onclick='testMSG("meow/{{ data.device_sn }}","{ \"mode\": \"uploadfile\", \"data\":{\"src\":\"/py_multi.py\",\"dst\":\"/mainfile_M1/zx_py_multi.py\"}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">upload to server</button>
+        <button onclick='testMSG("meow/{{ data.device_sn }}","{ \"mode\": \"cmd\", \"data\":{}, \"cmd_id\": \"C1728370820091\" }")' style="margin-right: 5px;">cmd</button>
     </div> 
     {% endif %}
     
@@ -204,6 +243,12 @@
                     setTimeout(() => location.reload(), 1200);
                 }
             });
+        }
+        function testMSG2(topic,cmd) {
+            // e.preventDefault();
+            // const topic = document.getElementById("subTopic").value;
+            // console.log(topic,cmd);
+            socket.emit('testMSG', { send_topic:topic,send_message:cmd });
         }
         function connectVPN(cmd) {
             // e.preventDefault();

@@ -10,5 +10,8 @@
         <a href="/">Home</a> |
         <a href="/debug/M1">debug</a> |
         <a href="/dashboard">dashboard</a>
+        {% if session.get('logged_in') %}
+        | <a href="/logout">Logout ({{ session.get('username') }})</a>
+        {% endif %}
     </nav>
 </header>
