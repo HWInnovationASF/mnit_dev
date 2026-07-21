@@ -226,6 +226,8 @@ def handle_anything(anything):
 def handle_dashboard():
     st = time.time()
     device_sn = request.args.get("device_sn")
+    if not device_sn:
+        return render_template('vx_dashboard.html', rows={}, device_sn=None)
     # cursor = get_cursor()
     # cursor.execute("SELECT DT,TS,DataA FROM log05 WHERE device_SN = '{}' ORDER BY DT DESC LIMIT 10".format(device_sn))
     # result = cursor.fetchall()
