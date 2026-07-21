@@ -4,7 +4,16 @@ import asyncio
 # import eventlet.hubs
 # eventlet.monkey_patch()  # patch for eventlet async support
 # eventlet.hubs.use_hub("eventlet.hubs.asyncio")
+
 from flask import Flask, g, render_template, request, jsonify ,abort,Response, session, redirect, url_for
+
+from flask import Flask, g, render_template, request, jsonify ,abort,Response
+
+# eventlet.monkey_patch()  # patch for eventlet async support
+# import eventlet.hubs
+# eventlet.hubs.use_hub("eventlet.hubs.asyncio")
+from flask import Flask, g, render_template, request, jsonify 
+
 
 from functools import wraps 
 from flask_mqtt import Mqtt 
@@ -203,6 +212,7 @@ def handle_anything(anything):
 
         cursor = get_cursor()
         if anything == 'ALL':
+
             sql = "SELECT d.device_SN, JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list AS d LEFT JOIN mdbiot.projectdevice_list AS pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list AS p ON pd.PID = p.PID GROUP BY d.device_SN;"
             cursor.execute(sql)
         else:
@@ -217,6 +227,35 @@ def handle_anything(anything):
         data['data'] = [sn for sn in d_arr if re.match(pattern, sn)]
         data['data_arr'] = sorted(result, key=lambda person: person["device_SN"])
         return render_template('template1.html',data = data)
+
+            # sql = "SELECT device_SN,Info FROM mdbiot.device_list WHERE 1"
+            sql = "SELECT d.device_SN, JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list AS d LEFT JOIN mdbiot.projectdevice_list AS pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list AS p ON pd.PID = p.PID GROUP BY d.device_SN;"
+        else:
+            # sql = "SELECT device_SN,Info FROM mdbiot.device_list WHERE device_SN LIKE '{}%'".format(clean)
+            sql = "SELECT d.device_SN,JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list d LEFT JOIN mdbiot.projectdevice_list pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list p ON pd.PID = p.PID WHERE d.device_SN LIKE '{}%' GROUP BY d.device_SN;".format(clean)
+
+        # print(sql)
+        cursor = get_cursor()
+        cursor.execute("{}".format(sql))
+        result = cursor.fetchall()
+        d_arr = [item['device_SN']  for item  in result]
+        # print(result)
+        
+        if clean in ['M1','RL','SI','IR','SQ','S1','']:
+            # Filter values starting with "M1"
+            pattern = r'^{}'.format(clean)  # regex: start with M1
+            # print(sorted_people.)
+            # print(pattern)
+            matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
+            sorted_people = sorted(result, key=lambda person: person["device_SN"])
+            data = {}
+            data['data'] = [sn for sn in d_arr if re.match(pattern, sn)]
+            data['data_arr'] = sorted(result, key=lambda person: person["device_SN"])
+            # print( data['data_arr'] )
+            return render_template('template1.html',data = data)
+        else:
+            return render_template('template1.html') 
+
 
     except Exception as e:
         print('Except as {}'.format(e))
@@ -373,7 +412,11 @@ def mx_config():
         return items
 
     data = {}
+
     data['device_sn']   = request.args.get('device_sn', '')
+
+    data['device_sn']   = request.args.get('device_sn')
+
     data['is_M1']       = bool(re.search('M1', data['device_sn']))
     data['files']       = get_ftp_files("/mainfile_M1")
     data['topic']       = request.form.get('topic')
