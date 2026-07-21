@@ -6,20 +6,49 @@
 
 
 <div style="padding: 15px;">
-    <div>Device S/N : {{device_sn}}</div>
+    <div>Device S/N : {{ device_sn or '(none)' }}</div>
 
+    {% if not device_sn %}
+    <div class="alert alert-warning" role="alert" style="margin-top:10px;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        ไม่พบ Device S/N — กรุณาเปิดหน้านี้ผ่านปุ่ม <b>Dashboard</b> จากหน้า
+        <a href="/debug/ALL">Debug</a> เพื่อเลือกอุปกรณ์ก่อน
+    </div>
+    {% else %}
     <div id="settingsPanel" class="mon-settings-panel">
         <div class="mon-settings-title">
             <i class="fa-solid fa-gear"></i> เลือกค่าที่ต้องการดู real-time (ตั้งค่าก่อนกด Start)
         </div>
+
+        <div class="mon-settings-group-title">Power Meter Main</div>
         <div class="mon-settings-options">
             <div class="form-check">
-                <input class="form-check-input metric-toggle" type="checkbox" value="1" id="metric-PM210001" checked>
-                <label class="form-check-label" for="metric-PM210001">Power Meter Main(p_t)</label>
+                <input class="form-check-input metric-toggle" type="checkbox" value="1" id="metric-PM210001-p_t" checked>
+                <label class="form-check-label" for="metric-PM210001-p_t">p_t</label>
+            </div>
+        </div>
+
+        <div class="mon-settings-group-title">BESS</div>
+        <div class="mon-settings-options">
+            <div class="form-check">
+                <input class="form-check-input metric-toggle" type="checkbox" value="1" id="metric-IN130001-p_t" checked>
+                <label class="form-check-label" for="metric-IN130001-p_t">p_t</label>
             </div>
             <div class="form-check">
-                <input class="form-check-input metric-toggle" type="checkbox" value="1" id="metric-IN130001" checked>
-                <label class="form-check-label" for="metric-IN130001">BESS (SoC)</label>
+                <input class="form-check-input metric-toggle" type="checkbox" value="1" id="metric-IN130001-soc" checked>
+                <label class="form-check-label" for="metric-IN130001-soc">SoC</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input metric-toggle" type="checkbox" value="1" id="metric-IN130001-cell_v_max" checked>
+                <label class="form-check-label" for="metric-IN130001-cell_v_max">Cell V Max</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input metric-toggle" type="checkbox" value="1" id="metric-IN130001-cell_v_min" checked>
+                <label class="form-check-label" for="metric-IN130001-cell_v_min">Cell V Min</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input metric-toggle" type="checkbox" value="1" id="metric-IN130001-v_avg" checked>
+                <label class="form-check-label" for="metric-IN130001-v_avg">V Avg</label>
             </div>
         </div>
     </div>
@@ -40,6 +69,7 @@
     <button class="btn btn-primary" id="startBtn">Start</button>
 
     <div id="container" style="width:80%; height:400px;"></div>
+    {% endif %}
 </div>
 
 <style>
@@ -54,6 +84,14 @@
         font-weight:600;
         margin-bottom:10px;
         color:#1a2b4c;
+    }
+    .mon-settings-group-title{
+        font-weight:600;
+        font-size:0.85rem;
+        color:#6b7a99;
+        margin:10px 0 4px;
+        text-transform:uppercase;
+        letter-spacing:0.03em;
     }
     .mon-settings-options{
         display:flex;
@@ -72,13 +110,14 @@
 {% endfor %}
 </ul> -->
 <!-- <h2>Users</h2> -->
+{% if device_sn %}
 <script>
     let socket = io();
     let h_data_arr = [];
     // h_data_arr = (['170000000',1231])
 
     const data = [];
-    const device_sn = '{{device_sn}}';
+    const device_sn = '{{ device_sn }}';
     // console.log(typeof(data));
     // console.log(data);
     
@@ -109,15 +148,25 @@
     let intervalId = null;
 
     // Metric config: which sub-device field to request/plot, and its label.
+    // A device id (e.g. "IN130001") can appear more than once with different
+    // fields — each becomes its own checkbox and its own chart series.
+    // `realtimeValue` is the value sent as {"realtime": X} for that field's
+    // read request — BESS (IN130001) requires 4, other devices use 1.
     // Add an entry here (+ a matching checkbox in the settings panel) to expose a new value.
     const METRICS = [
-        { id: 'PM210001', field: 'p_t',   label: 'Power Meter (p_t)' },
-        { id: 'IN130001', field: 'soc', label: 'BESS (SoC)' }
+        { id: 'PM210001', field: 'p_t',        label: 'Power Meter Main (p_t)', realtimeValue: 1 },
+        { id: 'IN130001', field: 'p_t',        label: 'BESS (p_t)',             realtimeValue: 4 },
+        { id: 'IN130001', field: 'soc',        label: 'BESS (SoC)',             realtimeValue: 4 },
+        { id: 'IN130001', field: 'cell_v_max', label: 'BESS (Cell V Max)',      realtimeValue: 4 },
+        { id: 'IN130001', field: 'cell_v_min', label: 'BESS (Cell V Min)',      realtimeValue: 4 },
+        { id: 'IN130001', field: 'v_avg',      label: 'BESS (V Avg)',           realtimeValue: 4 }
     ];
+
+    function metricKey(m){ return m.id + '-' + m.field; }
 
     function getSelectedMetrics() {
         return METRICS.filter(function(m){
-            const cb = document.getElementById('metric-' + m.id);
+            const cb = document.getElementById('metric-' + metricKey(m));
             return cb && cb.checked;
         });
     }
@@ -144,8 +193,8 @@
 
             const cmdData = {};
             selected.forEach(function(m){
-                cmdData[m.id] = {};
-                cmdData[m.id][m.field] = { realtime: 1 };
+                if (!cmdData[m.id]) cmdData[m.id] = {};
+                cmdData[m.id][m.field] = { realtime: m.realtimeValue };
             });
             const cmd = JSON.stringify({ mode: 'cmd', data: cmdData, cmd_id: 'C1728370820091' });
 
@@ -197,8 +246,9 @@
     }
 
 
-    // deviceId (e.g. "PM210001") -> chart.series index, kept stable across messages
-    const seriesIndexByDevice = {};
+    // metricKey (e.g. "IN130001-soc") -> chart.series index, kept stable across messages.
+    // A device id can carry several selected fields at once, each its own series.
+    const seriesIndexByMetric = {};
 
     socket.on('mqtt_message', data => {
         let msg_arr = JSON.parse(data.message);
@@ -208,25 +258,27 @@
         // at once; the server broadcasts every MQTT message to every client).
         if (device_SN !== device_sn) return;
 
-        const selectedIds = getSelectedMetrics().map(function(m){ return m.id; });
+        const selectedKeys = getSelectedMetrics().map(metricKey);
 
         Object.entries(msg_arr.data).forEach(([deviceId, values]) => {
-            const metric = METRICS.find(function(m){ return m.id === deviceId; });
-            if (!metric || selectedIds.indexOf(deviceId) === -1) return;
+            METRICS.filter(function(m){ return m.id === deviceId; }).forEach(function(metric){
+                const key = metricKey(metric);
+                if (selectedKeys.indexOf(key) === -1) return;
 
-            const raw = values[metric.field];
-            if (raw === undefined || raw === null) return;
-            const power = Number(raw);
-            if (Number.isNaN(power)) return;
+                const raw = values[metric.field];
+                if (raw === undefined || raw === null) return;
+                const power = Number(raw);
+                if (Number.isNaN(power)) return;
 
-            const point = [(msg_arr.ts * 1000), power];
+                const point = [(msg_arr.ts * 1000), power];
 
-            if (seriesIndexByDevice[deviceId] === undefined) {
-                chart.addSeries({ name: metric.label, data: [] });
-                seriesIndexByDevice[deviceId] = chart.series.length - 1;
-            }
+                if (seriesIndexByMetric[key] === undefined) {
+                    chart.addSeries({ name: metric.label, data: [] });
+                    seriesIndexByMetric[key] = chart.series.length - 1;
+                }
 
-            chart.series[seriesIndexByDevice[deviceId]].addPoint(point, true, false);
+                chart.series[seriesIndexByMetric[key]].addPoint(point, true, false);
+            });
         });
     });
 
@@ -331,7 +383,7 @@
         
     // });
 </script>
-
+{% endif %}
 
 <style>
     /* content {

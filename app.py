@@ -4,16 +4,7 @@ import asyncio
 # import eventlet.hubs
 # eventlet.monkey_patch()  # patch for eventlet async support
 # eventlet.hubs.use_hub("eventlet.hubs.asyncio")
-
 from flask import Flask, g, render_template, request, jsonify ,abort,Response, session, redirect, url_for
-
-from flask import Flask, g, render_template, request, jsonify ,abort,Response
-
-# eventlet.monkey_patch()  # patch for eventlet async support
-# import eventlet.hubs
-# eventlet.hubs.use_hub("eventlet.hubs.asyncio")
-from flask import Flask, g, render_template, request, jsonify 
-
 
 from functools import wraps 
 from flask_mqtt import Mqtt 
@@ -226,6 +217,7 @@ def handle_anything(anything):
         data['data'] = [sn for sn in d_arr if re.match(pattern, sn)]
         data['data_arr'] = sorted(result, key=lambda person: person["device_SN"])
         return render_template('template1.html',data = data)
+
     except Exception as e:
         print('Except as {}'.format(e))
         return render_template('template1.html') 
@@ -234,6 +226,8 @@ def handle_anything(anything):
 def handle_dashboard():
     st = time.time()
     device_sn = request.args.get("device_sn")
+    if not device_sn:
+        return render_template('vx_dashboard.html', rows={}, device_sn=None)
     # cursor = get_cursor()
     # cursor.execute("SELECT DT,TS,DataA FROM log05 WHERE device_SN = '{}' ORDER BY DT DESC LIMIT 10".format(device_sn))
     # result = cursor.fetchall()
@@ -381,11 +375,7 @@ def mx_config():
         return items
 
     data = {}
-
     data['device_sn']   = request.args.get('device_sn', '')
-
-    data['device_sn']   = request.args.get('device_sn')
-
     data['is_M1']       = bool(re.search('M1', data['device_sn']))
     data['files']       = get_ftp_files("/mainfile_M1")
     data['topic']       = request.form.get('topic')
@@ -486,8 +476,8 @@ def handle_ice(data):
     emit("ice-candidate", data, broadcast=True, include_self=False)
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=True,allow_unsafe_werkzeug=True)
+
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
 
 
 
