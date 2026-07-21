@@ -1,14 +1,10 @@
-import eventlet 
+# import eventlet
+import asyncio
 
 # import eventlet.hubs
-eventlet.monkey_patch()  # patch for eventlet async support
+# eventlet.monkey_patch()  # patch for eventlet async support
 # eventlet.hubs.use_hub("eventlet.hubs.asyncio")
-from flask import Flask, g, render_template, request, jsonify ,abort,Response
-
-eventlet.monkey_patch()  # patch for eventlet async support
-# import eventlet.hubs
-# eventlet.hubs.use_hub("eventlet.hubs.asyncio")
-from flask import Flask, g, render_template, request, jsonify 
+from flask import Flask, g, render_template, request, jsonify ,abort,Response, session, redirect, url_for
 
 from functools import wraps 
 from flask_mqtt import Mqtt 
@@ -30,6 +26,10 @@ import io
 load_dotenv()  # <-- load .env first
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-me')
+
+ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD = 'admin'
 
 # FTP 
 FTP_HOST = os.getenv('FTP_HOST') 
@@ -49,17 +49,19 @@ mqtt = Mqtt(app)
 
 # Subscribe topic
 SUBSCRIBE_TOPIC = 'meow/test_sub'
-socketio = SocketIO(app, cors_allowed_origins='*')
+# socketio = SocketIO(app, cors_allowed_origins='*')
+socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
 
 messages = []
 subscribed_topics = set()
 
+
 def connect_db():
     return pymysql.connect(
-        host=os.getenv('FTP_HOST') ,
+        host=os.getenv('db_host') ,
         user=os.getenv('db_user') ,
         password=os.getenv('db_pass'),
-        db='mdbiot_com',
+        db='',
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True
     )
@@ -105,6 +107,32 @@ def close_connection(exception):
     if db:
         db.close()
 
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return view(*args, **kwargs)
+    return wrapped
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            session['username'] = username
+            return redirect(url_for('handle_home'))
+        error = 'Invalid username or password'
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 
 # Callback: when MQTT client connects to broker
 @mqtt.on_connect()
@@ -121,56 +149,75 @@ def on_message(client, userdata, message):
     socketio.emit('mqtt_message', {'topic': topic, 'message': msg})
     # print(f"Received message on {message.topic}: {message.payload.decode()}")
 
+DEVICE_TYPE_PREFIXES = ['M1', 'RL', 'SI', 'IR', 'SQ', 'S1']
+
+def categorize_device_sn(device_sn):
+    sn = device_sn.upper()
+    for prefix in DEVICE_TYPE_PREFIXES:
+        if sn.startswith(prefix):
+            return prefix
+    return 'Other'
+
 @app.route('/')
+@login_required
 def handle_home():
-    return render_template('welcome.html')
+    device_sn_by_type = {p: [] for p in DEVICE_TYPE_PREFIXES + ['Other']}
+    try:
+        cursor = get_cursor()
+        cursor.execute("SELECT DISTINCT device_SN FROM mdbiot.device_list;")
+        rows = cursor.fetchall()
+        for row in rows:
+            device_sn_by_type[categorize_device_sn(row['device_SN'])].append(row['device_SN'])
+        device_breakdown = {k: len(v) for k, v in device_sn_by_type.items()}
+        device_total = sum(device_breakdown.values())
+    except Exception as e:
+        print('Except as {}'.format(e))
+        device_breakdown = {p: 0 for p in DEVICE_TYPE_PREFIXES + ['Other']}
+        device_total = '-'
+    return render_template('welcome.html', device_total=device_total, device_breakdown=device_breakdown, device_sn_by_type=device_sn_by_type)
     # return render_template('template1.html')
 
-@app.route('/debug')
-def handle_debug():
-    # print("===={}".format(clean))
-    clean = ''
-    cursor = get_cursor()
-    cursor.execute("SELECT device_SN,DT,TS_last,WSData FROM device_status WHERE device_SN LIKE '{}%' ".format(clean))
-    result = cursor.fetchall()
-    d_arr = [item['device_SN']  for item  in result]
-    pattern = r'^{}'.format(clean)  # regex: start with M1
-    # print(sorted_people.)
-    matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
-    sorted_people = sorted(result, key=lambda person: person["device_SN"])
-    return render_template('template1.html',data = matched_sns,data_arr=sorted_people )
+# @app.route('/debug')
+# def handle_debug():
+#     # print("===={}".format(clean))
+#     clean = ''
+#     cursor = get_cursor()
+#     cursor.execute("SELECT device_SN,DT,TS_last,WSData FROM mdbiot.device_list WHERE device_SN LIKE '{}%' ".format(clean))
+#     result = cursor.fetchall()
+#     d_arr = [item['device_SN']  for item  in result]
+#     pattern = r'^{}'.format(clean)  # regex: start with M1
+#     # print(sorted_people.)
+#     matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
+#     sorted_people = sorted(result, key=lambda person: person["device_SN"])
+#     return render_template('template1.html',data = matched_sns,data_arr=sorted_people )
 
 @app.route('/debug/<path:anything>')
 def handle_anything(anything):
     # return f"You visited: {request.path}"
     try:
-        sql = ""
-        # with connection.cursor() as cursor:
         clean = (anything.strip('/debug/')).upper() if anything.upper() != 'ALL' else ''
-        if anything == 'ALL':
-            sql = "SELECT * FROM device_status WHERE 1"
-        else:
-            sql = "SELECT * FROM device_status WHERE device_SN LIKE '{}%'".format(clean)
 
-        print(sql)
+        # validate before touching the DB so no unvalidated input reaches a query
+        if clean not in ['M1', 'RL', 'SI', 'IR', 'SQ', 'S1', '']:
+            return render_template('template1.html')
+
         cursor = get_cursor()
-        cursor.execute("{}".format(sql))
+        if anything == 'ALL':
+            sql = "SELECT d.device_SN, JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list AS d LEFT JOIN mdbiot.projectdevice_list AS pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list AS p ON pd.PID = p.PID GROUP BY d.device_SN;"
+            cursor.execute(sql)
+        else:
+            sql = "SELECT d.device_SN,JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list d LEFT JOIN mdbiot.projectdevice_list pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list p ON pd.PID = p.PID WHERE d.device_SN LIKE %s GROUP BY d.device_SN;"
+            cursor.execute(sql, (f"{clean}%",))
+
         result = cursor.fetchall()
         d_arr = [item['device_SN']  for item  in result]
 
-        
-        if clean in ['M1','RL','SI','IR','']:
-            # Filter values starting with "M1"
-            pattern = r'^{}'.format(clean)  # regex: start with M1
-            # print(sorted_people.)
-            matched_sns = [sn for sn in d_arr if re.match(pattern, sn)]
-            sorted_people = sorted(result, key=lambda person: person["device_SN"])
-            return render_template('template1.html',data = matched_sns,data_arr=sorted_people )
-        else:
-            return render_template('template1.html') 
+        pattern = r'^{}'.format(clean)  # regex: start with M1
+        data = {}
+        data['data'] = [sn for sn in d_arr if re.match(pattern, sn)]
+        data['data_arr'] = sorted(result, key=lambda person: person["device_SN"])
+        return render_template('template1.html',data = data)
 
-        # return render_template('index.html') 
-        
     except Exception as e:
         print('Except as {}'.format(e))
         return render_template('template1.html') 
@@ -179,14 +226,18 @@ def handle_anything(anything):
 def handle_dashboard():
     st = time.time()
     device_sn = request.args.get("device_sn")
-    cursor = get_cursor()
-    cursor.execute("SELECT DT,TS,DataA FROM log05 WHERE device_SN = '{}' ORDER BY DT DESC LIMIT 10".format(device_sn))
-    result = cursor.fetchall()
+    # cursor = get_cursor()
+    # cursor.execute("SELECT DT,TS,DataA FROM log05 WHERE device_SN = '{}' ORDER BY DT DESC LIMIT 10".format(device_sn))
+    # result = cursor.fetchall()
+    result = {}
     print(time.time() - st)
     # print(jsonify(result))
     # print(result)
     # print(device_sn)
-    return render_template('vx_dashboard.html',rows=result,device_sn=device_sn)
+    cmd_ss = '{"mode":"cmd","data":{"IN130001":{"batt_temp_avg":{"write":-500}}},"cmd_id":"C1728370820091"}'
+    
+    # return render_template('vx_dashboard.html',rows=result,device_sn=device_sn)
+    return render_template('vx_dashboard.html',rows=result,device_sn=device_sn,cmd_ss=cmd_ss)
 
 @app.route('/mqtt', methods=['GET', 'POST'])
 def mx_mqtt():
@@ -272,21 +323,8 @@ def mx_config():
     if request.method == 'POST':
         data = request.get_json()
         subTopic = data.get("subTopic")
-        print(data) 
-    topic = request.form.get('topic')
-    device_sn = request.args.get('device_sn')
-    cmd_on = '{ "mode": "cmd", "data":{"VPN":1}, "cmd_id": "C1728370820091" }'
-    cmd_off = '{ "mode": "cmd", "data":{"VPN":0}, "cmd_id": "C1728370820091" }'
-    cmd_check = '{ "mode": "cmd", "data":{"VPN":2}, "cmd_id": "C1728370820091" }'
-   
-    # def get_ftp_files():
-    #     FTP_DIR  = "/mainfile_M1"   # directory to list
-    #     ftp = FTP(FTP_HOST)
-    #     ftp.login(FTP_USER, FTP_PASS)
-    #     ftp.cwd(FTP_DIR)
-    #     files = ftp.nlst()
-    #     ftp.quit()
-    #     return files
+        # print(data) 
+
     def get_ftp_files(_DIR):
         # FTP_DIR = "/mainfile_M1"
 
@@ -334,12 +372,16 @@ def mx_config():
 
         return items
 
-    
     data = {}
-    data['is_M1'] = bool(re.search('M1', device_sn))
-    data['files'] = get_ftp_files("/mainfile_M1")
+    data['device_sn']   = request.args.get('device_sn', '')
+    data['is_M1']       = bool(re.search('M1', data['device_sn']))
+    data['files']       = get_ftp_files("/mainfile_M1")
+    data['topic']       = request.form.get('topic')
+    data['cmd_on']      = '{ "mode": "cmd", "data":{"VPN":1}, "cmd_id": "C1728370820091" }'
+    data['cmd_off']     = '{ "mode": "cmd", "data":{"VPN":0}, "cmd_id": "C1728370820091" }'
+    data['cmd_check']   = '{ "mode": "cmd", "data":{"VPN":2}, "cmd_id": "C1728370820091" }'
 
-    return render_template('mx_mqtt.html', message=device_sn,topic=topic,cmd_on=cmd_on,cmd_off=cmd_off,cmd_check=cmd_check,data=data)
+    return render_template('mx_mqtt.html', data=data)
 
 
 @socketio.on('subscribe')
