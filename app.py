@@ -212,7 +212,6 @@ def handle_anything(anything):
 
         cursor = get_cursor()
         if anything == 'ALL':
-
             sql = "SELECT d.device_SN, JSON_UNQUOTE(JSON_EXTRACT(d.Info, '$.Name')) AS Name, p.ProjectName FROM mdbiot.device_list AS d LEFT JOIN mdbiot.projectdevice_list AS pd ON d.device_SN = pd.device_SN LEFT JOIN mdbiot.project_list AS p ON pd.PID = p.PID GROUP BY d.device_SN;"
             cursor.execute(sql)
         else:
