@@ -4,3 +4,4 @@ flask-socketio
 PyMySQL
 requests
 python-dotenv
+playwright

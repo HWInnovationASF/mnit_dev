@@ -14,6 +14,7 @@ import re
 import subprocess
 import time
 import json
+from datetime import datetime
 from ftplib import FTP
 import requests
 import os
@@ -316,6 +317,43 @@ def delete_ftp_file(filename):
 
     ftp.quit()
     return jsonify({"status": "ok", "file": filename})
+
+@app.get('/remoteiot/devices')
+@login_required
+def remoteiot_devices():
+    import remoteiot_client
+
+    error = None
+    devices = []
+    try:
+        devices = remoteiot_client.list_devices()
+    except remoteiot_client.RemoteIoTError as exc:
+        error = str(exc)
+
+    updated_at = remoteiot_client.cache_updated_at()
+    updated_at_text = (
+        datetime.fromtimestamp(updated_at).strftime('%H:%M:%S') if updated_at else None
+    )
+
+    return render_template(
+        'remoteiot_devices.html', devices=devices, error=error, updated_at=updated_at_text
+    )
+
+@app.post('/remoteiot/connect')
+@login_required
+def remoteiot_connect():
+    import remoteiot_client
+
+    serial = request.form.get('serial', '').strip()
+    if not serial:
+        abort(400, 'serial is required')
+
+    try:
+        url = remoteiot_client.create_http_connection(serial)
+    except remoteiot_client.RemoteIoTError as exc:
+        return render_template('remoteiot_devices.html', devices=[], error=str(exc))
+
+    return render_template('remoteiot_view.html', device_url=url)
 
 @app.route('/config', methods=['GET', 'POST'])
 def mx_config():

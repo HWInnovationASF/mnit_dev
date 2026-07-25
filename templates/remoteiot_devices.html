@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RemoteIoT Devices</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container py-4">
+    <a href="/" class="d-inline-block mb-3">&larr; Home</a>
+    <div class="card">
+        <div class="card-body">
+            <h4 class="card-title">อุปกรณ์บน RemoteIoT</h4>
+            <p class="text-muted small">
+                {% if updated_at %}อัปเดตล่าสุด {{ updated_at }} (รีเฟรชอัตโนมัติทุก 15 วิ){% else %}กำลังโหลดข้อมูล...{% endif %}
+                <a href="/remoteiot/devices">รีเฟรชหน้า</a>
+            </p>
+            {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr><th>ชื่ออุปกรณ์</th><th>Serial</th><th>สถานะ Connection</th><th></th></tr>
+                </thead>
+                <tbody>
+                {% for d in devices %}
+                    <tr>
+                        <td>{{ d.name }}</td>
+                        <td><code>{{ d.serial }}</code></td>
+                        <td>
+                            {% if d.connection_url %}
+                                <span class="text-success fw-bold">สร้างแล้ว</span> —
+                                <a target="_blank" rel="noopener" href="{{ d.connection_url }}">{{ d.connection_url }}</a>
+                            {% else %}
+                                <span class="text-muted">ยังไม่ได้สร้าง</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" action="/remoteiot/connect">
+                                <input type="hidden" name="serial" value="{{ d.serial }}">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    {{ "สร้างใหม่" if d.connection_url else "สร้าง HTTP Connection" }}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="4">ไม่พบอุปกรณ์</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>
