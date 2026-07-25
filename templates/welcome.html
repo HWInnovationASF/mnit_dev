@@ -90,7 +90,7 @@
                     <div class="mon-panel-body">
                         {% if remoteiot_devices %}
                         <table class="table mon-breakdown-table">
-                            <thead><tr><th>อุปกรณ์</th><th>Serial</th><th>สถานะ</th></tr></thead>
+                            <thead><tr><th>อุปกรณ์</th><th>Serial</th><th>สถานะ</th><th></th></tr></thead>
                             <tbody>
                                 {% for d in remoteiot_devices %}
                                 <tr>
@@ -102,6 +102,14 @@
                                         {% else %}
                                         <span class="text-muted">ยังไม่ได้สร้าง</span>
                                         {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="post" action="/remoteiot/connect" style="margin:0">
+                                            <input type="hidden" name="serial" value="{{ d.serial }}">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                {{ "สร้างใหม่" if d.connection_url else "สร้าง" }}
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                                 {% endfor %}
