@@ -100,7 +100,9 @@ def cache_updated_at():
 
 
 def create_http_connection(serial):
-    result = _run_worker("create_connection", serial)
+    # more steps than list_devices (open menu, pick protocol, submit, confirm
+    # dialog) and Render's free-tier CPU is slow - give it more headroom
+    result = _run_worker("create_connection", serial, timeout=150)
     url = result["url"]
 
     # reflect the new connection immediately in the cache instead of waiting
