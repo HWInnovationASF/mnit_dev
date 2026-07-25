@@ -176,11 +176,19 @@ def handle_home():
         print('Except as {}'.format(e))
         device_breakdown = {p: 0 for p in DEVICE_TYPE_PREFIXES + ['Other']}
         device_total = '-'
-    try:
-        remoteiot_devices = remoteiot_client.list_devices()
-    except remoteiot_client.RemoteIoTError:
-        remoteiot_devices = []
-    return render_template('welcome.html', device_total=device_total, device_breakdown=device_breakdown, device_sn_by_type=device_sn_by_type, remoteiot_devices=remoteiot_devices)
+    remoteiot_sites = remoteiot_client.load_sites()
+    remoteiot_devices = []
+    remoteiot_default_site = remoteiot_sites[0]['key'] if remoteiot_sites else None
+    if remoteiot_default_site:
+        try:
+            remoteiot_devices = remoteiot_client.list_devices(remoteiot_default_site)
+        except remoteiot_client.RemoteIoTError:
+            remoteiot_devices = []
+    return render_template(
+        'welcome.html', device_total=device_total, device_breakdown=device_breakdown,
+        device_sn_by_type=device_sn_by_type, remoteiot_devices=remoteiot_devices,
+        remoteiot_default_site=remoteiot_default_site,
+    )
     # return render_template('template1.html')
 
 # @app.route('/debug')
@@ -326,35 +334,73 @@ def delete_ftp_file(filename):
 @app.get('/remoteiot/devices')
 @login_required
 def remoteiot_devices():
+    sites = remoteiot_client.load_sites()
+    site_key = request.args.get('site') or (sites[0]['key'] if sites else None)
+
     error = None
     devices = []
-    try:
-        devices = remoteiot_client.list_devices()
-    except remoteiot_client.RemoteIoTError as exc:
-        error = str(exc)
-
-    updated_at = remoteiot_client.cache_updated_at()
-    updated_at_text = (
-        datetime.fromtimestamp(updated_at).strftime('%H:%M:%S') if updated_at else None
-    )
+    updated_at_text = None
+    if not sites:
+        error = 'ยังไม่มี site ตั้งค่าไว้ - เพิ่ม site ก่อน'
+    else:
+        try:
+            devices = remoteiot_client.list_devices(site_key)
+        except remoteiot_client.RemoteIoTError as exc:
+            error = str(exc)
+        updated_at = remoteiot_client.cache_updated_at(site_key)
+        updated_at_text = datetime.fromtimestamp(updated_at).strftime('%H:%M:%S') if updated_at else None
 
     return render_template(
-        'remoteiot_devices.html', devices=devices, error=error, updated_at=updated_at_text
+        'remoteiot_devices.html',
+        devices=devices,
+        error=error,
+        updated_at=updated_at_text,
+        sites=sites,
+        selected_site=site_key,
     )
 
 @app.post('/remoteiot/connect')
 @login_required
 def remoteiot_connect():
     serial = request.form.get('serial', '').strip()
-    if not serial:
-        abort(400, 'serial is required')
+    site_key = request.form.get('site', '').strip()
+    if not serial or not site_key:
+        abort(400, 'serial and site are required')
 
     try:
-        url = remoteiot_client.create_http_connection(serial)
+        url = remoteiot_client.create_http_connection(site_key, serial)
     except remoteiot_client.RemoteIoTError as exc:
-        return render_template('remoteiot_devices.html', devices=[], error=str(exc))
+        return render_template(
+            'remoteiot_devices.html', devices=[], error=str(exc),
+            sites=remoteiot_client.load_sites(), selected_site=site_key,
+        )
 
     return render_template('remoteiot_view.html', device_url=url)
+
+@app.get('/remoteiot/sites')
+@login_required
+def remoteiot_sites_page():
+    return render_template('remoteiot_sites.html', sites=remoteiot_client.load_sites())
+
+@app.post('/remoteiot/sites')
+@login_required
+def remoteiot_sites_save():
+    key = request.form.get('key', '').strip()
+    label = request.form.get('label', '').strip()
+    email = request.form.get('email', '').strip()
+    password = request.form.get('password', '').strip()
+
+    if not key or not label or not email or not password:
+        abort(400, 'key, label, email and password are required')
+
+    remoteiot_client.add_or_update_site(key, label, email, password)
+    return redirect(url_for('remoteiot_sites_page'))
+
+@app.post('/remoteiot/sites/<key>/delete')
+@login_required
+def remoteiot_sites_delete(key):
+    remoteiot_client.delete_site(key)
+    return redirect(url_for('remoteiot_sites_page'))
 
 @app.route('/config', methods=['GET', 'POST'])
 def mx_config():

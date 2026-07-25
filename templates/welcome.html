@@ -85,7 +85,8 @@
                 <div class="mon-panel" style="margin-top:18px">
                     <div class="mon-panel-header" style="display:flex;align-items:center;">
                         <span>RemoteIoT</span>
-                        <a href="/remoteiot/devices" style="margin-left:auto;font-size:0.85rem;color:#1e4db7;text-decoration:none;">ดูทั้งหมด &rarr;</a>
+                        <a href="/remoteiot/sites" style="margin-left:auto;font-size:0.85rem;color:#6b7a99;text-decoration:none;">จัดการ Site</a>
+                        <a href="/remoteiot/devices" style="margin-left:12px;font-size:0.85rem;color:#1e4db7;text-decoration:none;">ดูทั้งหมด &rarr;</a>
                     </div>
                     <div class="mon-panel-body">
                         {% if remoteiot_devices %}
@@ -106,6 +107,7 @@
                                     <td>
                                         <form method="post" action="/remoteiot/connect" style="margin:0">
                                             <input type="hidden" name="serial" value="{{ d.serial }}">
+                                            <input type="hidden" name="site" value="{{ remoteiot_default_site }}">
                                             <button type="submit" class="btn btn-primary btn-sm">
                                                 {{ "สร้างใหม่" if d.connection_url else "สร้าง" }}
                                             </button>

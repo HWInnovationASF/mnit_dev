@@ -14,10 +14,25 @@
     <a href="/" class="d-inline-block mb-3">&larr; Home</a>
     <div class="card">
         <div class="card-body">
-            <h4 class="card-title">อุปกรณ์บน RemoteIoT</h4>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <h4 class="card-title mb-0">อุปกรณ์บน RemoteIoT</h4>
+                <a href="/remoteiot/sites" class="small">จัดการ Site</a>
+            </div>
+
+            {% if sites %}
+            <form method="get" action="/remoteiot/devices" class="mt-3 mb-2" style="max-width:300px">
+                <label class="form-label small text-muted">Site</label>
+                <select name="site" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for s in sites %}
+                    <option value="{{ s.key }}" {{ "selected" if s.key == selected_site else "" }}>{{ s.label }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% endif %}
+
             <p class="text-muted small">
                 {% if updated_at %}อัปเดตล่าสุด {{ updated_at }} (รีเฟรชอัตโนมัติทุก 15 วิ){% else %}กำลังโหลดข้อมูลครั้งแรก (อาจใช้เวลาถึง 1 นาที หน้าจะรีเฟรชอัตโนมัติ)...{% endif %}
-                <a href="/remoteiot/devices">รีเฟรชหน้า</a>
+                <a href="/remoteiot/devices{{ '?site=' + selected_site if selected_site else '' }}">รีเฟรชหน้า</a>
             </p>
             {% if error %}
             <div class="alert alert-danger">{{ error }}</div>
@@ -42,6 +57,7 @@
                         <td>
                             <form method="post" action="/remoteiot/connect">
                                 <input type="hidden" name="serial" value="{{ d.serial }}">
+                                <input type="hidden" name="site" value="{{ selected_site }}">
                                 <button type="submit" class="btn btn-primary btn-sm">
                                     {{ "สร้างใหม่" if d.connection_url else "สร้าง HTTP Connection" }}
                                 </button>

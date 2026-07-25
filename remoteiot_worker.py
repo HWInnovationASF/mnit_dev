@@ -9,23 +9,15 @@ module-level setup either.
 """
 
 import json
-import os
 import re
 import sys
 import traceback
 from pathlib import Path
 
-from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
-
-REMOTEIOT_EMAIL = os.getenv("REMOTEIOT_EMAIL")
-REMOTEIOT_PASSWORD = os.getenv("REMOTEIOT_PASSWORD")
 LOGIN_URL = "https://remoteiot.com/portal/?link=login"
 PORTAL_URL = "https://remoteiot.com/portal/"
-SESSION_FILE = BASE_DIR / ".remoteiot_session.json"
 
 
 class RemoteIoTError(Exception):
@@ -36,30 +28,30 @@ def _is_logged_in(page):
     return page.query_selector(".v-menubar") is not None or "Devices" in page.url
 
 
-def _login(page):
+def _login(page, email, password):
     page.goto(LOGIN_URL, wait_until="domcontentloaded")
     email_input = page.wait_for_selector("input", state="visible")
     email_input.click()
-    email_input.type(REMOTEIOT_EMAIL, delay=5)
+    email_input.type(email, delay=5)
     page.get_by_text("Next", exact=True).click()
 
     pw_input = page.wait_for_selector("input[type=password]", state="visible")
     pw_input.click()
-    pw_input.type(REMOTEIOT_PASSWORD, delay=5)
+    pw_input.type(password, delay=5)
     page.get_by_text("Sign In", exact=True).click()
     page.wait_for_selector("table tr", state="attached", timeout=15000)
 
     if not _is_logged_in(page):
-        raise RemoteIoTError("Login to RemoteIoT failed - check REMOTEIOT_EMAIL/REMOTEIOT_PASSWORD")
+        raise RemoteIoTError("Login to RemoteIoT failed - check the site's email/password")
 
 
-def _open_logged_in_page(browser):
-    if not REMOTEIOT_EMAIL or not REMOTEIOT_PASSWORD:
-        raise RemoteIoTError("REMOTEIOT_EMAIL/REMOTEIOT_PASSWORD not configured")
+def _open_logged_in_page(browser, email, password, session_file):
+    if not email or not password:
+        raise RemoteIoTError("site email/password not configured")
 
-    if SESSION_FILE.exists():
+    if session_file.exists():
         context = browser.new_context(
-            storage_state=str(SESSION_FILE), viewport={"width": 1400, "height": 900}
+            storage_state=str(session_file), viewport={"width": 1400, "height": 900}
         )
         page = context.new_page()
         page.goto(PORTAL_URL, wait_until="domcontentloaded")
@@ -73,8 +65,8 @@ def _open_logged_in_page(browser):
 
     context = browser.new_context(viewport={"width": 1400, "height": 900})
     page = context.new_page()
-    _login(page)
-    context.storage_state(path=str(SESSION_FILE))
+    _login(page, email, password)
+    context.storage_state(path=str(session_file))
     return context, page
 
 
@@ -107,16 +99,16 @@ def _parse_devices(page):
     return devices
 
 
-def list_devices(browser):
-    context, page = _open_logged_in_page(browser)
+def list_devices(browser, email, password, session_file):
+    context, page = _open_logged_in_page(browser, email, password, session_file)
     try:
         return _parse_devices(page)
     finally:
         context.close()
 
 
-def create_http_connection(browser, serial):
-    context, page = _open_logged_in_page(browser)
+def create_http_connection(browser, email, password, session_file, serial):
+    context, page = _open_logged_in_page(browser, email, password, session_file)
     try:
         target_row = None
         for row in page.query_selector_all("table tr"):
@@ -154,16 +146,23 @@ def create_http_connection(browser, serial):
 
 def main():
     action = sys.argv[1] if len(sys.argv) > 1 else ""
+    config = json.loads(sys.argv[2]) if len(sys.argv) > 2 else {}
+    email = config.get("email")
+    password = config.get("password")
+    session_file = Path(config.get("session_file", ".remoteiot_session.json"))
 
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             try:
                 if action == "list_devices":
-                    result = {"ok": True, "devices": list_devices(browser)}
+                    result = {"ok": True, "devices": list_devices(browser, email, password, session_file)}
                 elif action == "create_connection":
-                    serial = sys.argv[2]
-                    result = {"ok": True, "url": create_http_connection(browser, serial)}
+                    serial = sys.argv[3]
+                    result = {
+                        "ok": True,
+                        "url": create_http_connection(browser, email, password, session_file, serial),
+                    }
                 else:
                     result = {"ok": False, "error": f"unknown action: {action!r}"}
             finally:
