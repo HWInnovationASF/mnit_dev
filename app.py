@@ -176,7 +176,11 @@ def handle_home():
         print('Except as {}'.format(e))
         device_breakdown = {p: 0 for p in DEVICE_TYPE_PREFIXES + ['Other']}
         device_total = '-'
-    return render_template('welcome.html', device_total=device_total, device_breakdown=device_breakdown, device_sn_by_type=device_sn_by_type)
+    try:
+        remoteiot_devices = remoteiot_client.list_devices()
+    except remoteiot_client.RemoteIoTError:
+        remoteiot_devices = []
+    return render_template('welcome.html', device_total=device_total, device_breakdown=device_breakdown, device_sn_by_type=device_sn_by_type, remoteiot_devices=remoteiot_devices)
     # return render_template('template1.html')
 
 # @app.route('/debug')

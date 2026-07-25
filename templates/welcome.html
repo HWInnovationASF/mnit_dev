@@ -82,6 +82,40 @@
                     </div>
                 </div>
 
+                <div class="mon-panel" style="margin-top:18px">
+                    <div class="mon-panel-header" style="display:flex;align-items:center;">
+                        <span>RemoteIoT</span>
+                        <a href="/remoteiot/devices" style="margin-left:auto;font-size:0.85rem;color:#1e4db7;text-decoration:none;">ดูทั้งหมด &rarr;</a>
+                    </div>
+                    <div class="mon-panel-body">
+                        {% if remoteiot_devices %}
+                        <table class="table mon-breakdown-table">
+                            <thead><tr><th>อุปกรณ์</th><th>Serial</th><th>สถานะ</th></tr></thead>
+                            <tbody>
+                                {% for d in remoteiot_devices %}
+                                <tr>
+                                    <td>{{ d.name }}</td>
+                                    <td><code>{{ d.serial }}</code></td>
+                                    <td>
+                                        {% if d.connection_url %}
+                                        <a href="{{ d.connection_url }}" target="_blank" rel="noopener" class="text-success fw-bold" style="text-decoration:none">สร้างแล้ว</a>
+                                        {% else %}
+                                        <span class="text-muted">ยังไม่ได้สร้าง</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="mon-empty">
+                            <i class="fa-solid fa-tower-broadcast"></i>
+                            <p>กำลังโหลดข้อมูล RemoteIoT...</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
             </main>
 
             <footer class="mon-footer">
