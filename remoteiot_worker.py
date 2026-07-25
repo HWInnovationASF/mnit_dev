@@ -8,6 +8,7 @@ multiprocessing's "spawn" start method - never re-imports/re-executes app.py's
 module-level setup either.
 """
 
+import base64
 import json
 import re
 import sys
@@ -39,7 +40,15 @@ def _login(page, email, password):
     pw_input.click()
     pw_input.type(password, delay=5)
     page.get_by_text("Sign In", exact=True).click()
-    page.wait_for_selector("table tr", state="attached", timeout=15000)
+
+    try:
+        page.wait_for_selector("table tr", state="attached", timeout=25000)
+    except PlaywrightTimeoutError:
+        screenshot_b64 = base64.b64encode(page.screenshot(full_page=True)).decode("ascii")
+        raise RemoteIoTError(
+            f"Login did not reach the Devices dashboard within timeout "
+            f"(stuck on: {page.url}). SCREENSHOT_B64:{screenshot_b64}"
+        )
 
     if not _is_logged_in(page):
         raise RemoteIoTError("Login to RemoteIoT failed - check the site's email/password")

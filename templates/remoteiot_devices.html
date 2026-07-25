@@ -35,7 +35,12 @@
                 <a href="/remoteiot/devices{{ '?site=' + selected_site if selected_site else '' }}">รีเฟรชหน้า</a>
             </p>
             {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
+            <div class="alert alert-danger">
+                {{ error.split("SCREENSHOT_B64:")[0] }}
+                {% if "SCREENSHOT_B64:" in error %}
+                <br><img src="data:image/png;base64,{{ error.split("SCREENSHOT_B64:")[1] }}" style="max-width:100%;border:1px solid #ccc;margin-top:8px">
+                {% endif %}
+            </div>
             {% endif %}
             <table class="table table-hover align-middle">
                 <thead>
