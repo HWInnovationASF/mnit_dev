@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+import traceback
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -168,7 +169,7 @@ def main():
             finally:
                 browser.close()
     except Exception as exc:
-        result = {"ok": False, "error": str(exc)}
+        result = {"ok": False, "error": str(exc), "traceback": traceback.format_exc()}
 
     print(json.dumps(result))
 

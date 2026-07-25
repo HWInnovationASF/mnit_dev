@@ -47,7 +47,10 @@ def _run_worker(*args, timeout=60):
         raise RemoteIoTError((proc.stderr or output).strip())
 
     if not result.get("ok"):
-        raise RemoteIoTError(result.get("error", "unknown RemoteIoT worker error"))
+        # TEMP: include the worker's traceback for diagnosis - remove once the
+        # root cause of the asyncio-loop error on Render is confirmed
+        detail = result.get("traceback") or result.get("error", "unknown RemoteIoT worker error")
+        raise RemoteIoTError(detail)
 
     return result
 
