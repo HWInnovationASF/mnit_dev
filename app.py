@@ -397,7 +397,12 @@ def remoteiot_sites_save():
     if not key or not label or not email or not password:
         abort(400, 'key, label, email and password are required')
 
-    remoteiot_client.add_or_update_site(key, label, email, password)
+    try:
+        remoteiot_client.add_or_update_site(key, label, email, password)
+    except remoteiot_client.RemoteIoTError as exc:
+        return render_template(
+            'remoteiot_sites.html', sites=remoteiot_client.load_sites(), warning=str(exc)
+        )
     return redirect(url_for('remoteiot_sites_page'))
 
 @app.post('/remoteiot/sites/<key>/delete')

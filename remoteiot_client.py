@@ -63,6 +63,18 @@ def get_site_password(site_key):
 
 
 def add_or_update_site(key, label, email, password):
+    # set the in-memory env var first - this always succeeds and is enough to
+    # make the site usable immediately in this process, even if the .env
+    # write below fails for some reason (e.g. read-only filesystem)
+    env_key = _password_env_key(key)
+    os.environ[env_key] = password
+
+    env_write_error = None
+    try:
+        set_key(str(ENV_FILE), env_key, password)
+    except OSError as exc:
+        env_write_error = str(exc)
+
     sites = load_sites()
     for site in sites:
         if site["key"] == key:
@@ -72,11 +84,12 @@ def add_or_update_site(key, label, email, password):
         sites.append({"key": key, "label": label, "email": email})
     _save_sites(sites)
 
-    # password is kept out of the JSON file (which gets committed to git) and
-    # stored in .env instead, one REMOTEIOT_PASSWORD_<KEY> var per site
-    env_key = _password_env_key(key)
-    set_key(str(ENV_FILE), env_key, password)
-    os.environ[env_key] = password
+    if env_write_error:
+        raise RemoteIoTError(
+            f"Site saved and usable now, but couldn't write the password to .env "
+            f"({env_write_error}) - it won't survive a restart until you set "
+            f"{env_key} in .env yourself and commit it."
+        )
 
 
 def delete_site(key):
