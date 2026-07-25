@@ -67,8 +67,8 @@ def _refresh_cache_once():
 
 def _background_refresh_loop():
     while True:
-        time.sleep(REFRESH_INTERVAL)
         _refresh_cache_once()
+        time.sleep(REFRESH_INTERVAL)
 
 
 def _ensure_background_refresh():
@@ -79,13 +79,16 @@ def _ensure_background_refresh():
     threading.Thread(target=_background_refresh_loop, daemon=True).start()
 
 
+# Start populating the cache as soon as this module loads (app startup),
+# instead of waiting for the first incoming request. A cold browser-automation
+# round trip takes ~60s on Render's free tier - long enough to blow past
+# Render/Cloudflare's proxy timeout if it happens inside a request. Callers
+# of list_devices() just read whatever's cached so far (possibly still empty
+# right after boot) instead of blocking on it.
+_ensure_background_refresh()
+
+
 def list_devices():
-    _ensure_background_refresh()
-
-    if _cache["devices"] is None:
-        # first call ever - nothing cached yet, block once to populate it
-        _refresh_cache_once()
-
     if _cache["devices"] is None and _cache["error"]:
         raise RemoteIoTError(_cache["error"])
 

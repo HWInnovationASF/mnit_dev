@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 
 from werkzeug.utils import secure_filename
 import io
+import remoteiot_client
 # pip install -r requirements.txt
 
 load_dotenv()  # <-- load .env first
@@ -321,8 +322,6 @@ def delete_ftp_file(filename):
 @app.get('/remoteiot/devices')
 @login_required
 def remoteiot_devices():
-    import remoteiot_client
-
     error = None
     devices = []
     try:
@@ -342,8 +341,6 @@ def remoteiot_devices():
 @app.post('/remoteiot/connect')
 @login_required
 def remoteiot_connect():
-    import remoteiot_client
-
     serial = request.form.get('serial', '').strip()
     if not serial:
         abort(400, 'serial is required')
