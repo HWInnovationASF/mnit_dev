@@ -1,9 +1,10 @@
 import atexit
+import multiprocessing
 import os
 import re
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
@@ -16,10 +17,14 @@ PORTAL_URL = "https://remoteiot.com/portal/"
 BASE_DIR = Path(__file__).resolve().parent
 SESSION_FILE = BASE_DIR / ".remoteiot_session.json"
 
-# Playwright's sync API is bound to the OS thread that created it, but Flask's
-# dev server handles each request on a new thread - so all browser work must be
-# funneled through this single dedicated worker thread instead.
-_executor = ThreadPoolExecutor(max_workers=1)
+# Playwright's sync API refuses to run inside a thread that has an asyncio
+# event loop attached. On Render, flask-socketio/eventlet monkey-patches
+# threading process-wide, so a plain worker thread isn't a real isolated OS
+# thread anymore ("It looks like you are using Playwright Sync API inside the
+# asyncio loop"). A genuine child process (spawned, not forked, so it doesn't
+# inherit the parent's monkey-patched modules) sidesteps that entirely.
+_mp_context = multiprocessing.get_context("spawn")
+_executor = ProcessPoolExecutor(max_workers=1, mp_context=_mp_context)
 _playwright = None
 _browser = None
 
@@ -141,8 +146,11 @@ def _list_devices_impl():
 
 
 def _refresh_cache_once():
+    # runs in the parent process - _list_devices_impl executes in the
+    # dedicated child process, its plain-data return value crosses back over
+    # the ProcessPoolExecutor's IPC pipe so it's safe to store here
     try:
-        devices = _list_devices_impl()
+        devices = _executor.submit(_list_devices_impl).result()
         _cache["devices"] = devices
         _cache["updated_at"] = time.time()
         _cache["error"] = None
@@ -154,7 +162,7 @@ def _background_refresh_loop():
     while True:
         time.sleep(REFRESH_INTERVAL)
         if REMOTEIOT_EMAIL and REMOTEIOT_PASSWORD:
-            _executor.submit(_refresh_cache_once)
+            _refresh_cache_once()
 
 
 def _ensure_background_refresh():
@@ -170,7 +178,7 @@ def list_devices():
 
     if _cache["devices"] is None:
         # first call ever - nothing cached yet, block once to populate it
-        _executor.submit(_refresh_cache_once).result()
+        _refresh_cache_once()
 
     if _cache["devices"] is None and _cache["error"]:
         raise RemoteIoTError(_cache["error"])
@@ -214,19 +222,19 @@ def _create_http_connection_impl(serial):
             pass
 
         link = page.wait_for_selector("a:has-text('Open URL')", state="visible", timeout=15000)
-        url = link.get_attribute("href")
-
-        # reflect the new connection immediately in the cache instead of waiting
-        # for the next background refresh cycle
-        if _cache["devices"]:
-            for device in _cache["devices"]:
-                if device["serial"] == serial:
-                    device["connection_url"] = url
-
-        return url
+        return link.get_attribute("href")
     finally:
         context.close()
 
 
 def create_http_connection(serial):
-    return _executor.submit(_create_http_connection_impl, serial).result()
+    url = _executor.submit(_create_http_connection_impl, serial).result()
+
+    # reflect the new connection immediately in the cache (parent process)
+    # instead of waiting for the next background refresh cycle
+    if _cache["devices"]:
+        for device in _cache["devices"]:
+            if device["serial"] == serial:
+                device["connection_url"] = url
+
+    return url
