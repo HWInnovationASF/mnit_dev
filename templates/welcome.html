@@ -89,56 +89,59 @@
                         <a href="/remoteiot/devices" style="margin-left:12px;font-size:0.85rem;color:#1e4db7;text-decoration:none;">ดูทั้งหมด &rarr;</a>
                     </div>
                     <div class="mon-panel-body">
-                        {% if remoteiot_sites_data %}
-                            {% for site in remoteiot_sites_data %}
-                            <div style="{{ 'margin-bottom:22px' if not loop.last else '' }}">
-                                <div style="font-weight:700;color:#1a2b4c;margin-bottom:8px;">{{ site.label }}</div>
-                                {% if site.error %}
-                                <div class="alert alert-danger py-1 px-2" style="font-size:0.85rem;">{{ site.error }}</div>
-                                {% elif site.devices %}
-                                <table class="table mon-breakdown-table">
-                                    <thead><tr><th></th><th>อุปกรณ์</th><th>Serial</th><th>สถานะ</th><th></th></tr></thead>
-                                    <tbody>
-                                        {% for d in site.devices %}
-                                        <tr>
-                                            <td>
-                                                {% if d.online %}
-                                                <span class="badge bg-success">Online</span>
-                                                {% else %}
-                                                <span class="badge bg-danger">Offline</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ d.name }}</td>
-                                            <td><code>{{ d.serial }}</code></td>
-                                            <td>
-                                                {% if d.connection_url %}
-                                                <a href="{{ d.connection_url }}" target="_blank" rel="noopener" class="text-success fw-bold" style="text-decoration:none">สร้างแล้ว</a>
-                                                {% else %}
-                                                <span class="text-muted">ยังไม่ได้สร้าง</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <form method="post" action="/remoteiot/connect" style="margin:0">
-                                                    <input type="hidden" name="serial" value="{{ d.serial }}">
-                                                    <input type="hidden" name="site" value="{{ site.key }}">
-                                                    <button type="submit" class="btn btn-primary btn-sm"
-                                                            {% if not d.online %}disabled title="อุปกรณ์ออฟไลน์ สร้าง Connection ไม่ได้"{% endif %}>
-                                                        {{ "สร้างใหม่" if d.connection_url else "สร้าง" }}
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                                {% else %}
-                                <div class="mon-empty" style="padding:16px 0;">
-                                    <i class="fa-solid fa-tower-broadcast"></i>
-                                    <p style="margin:6px 0 0;">กำลังโหลดข้อมูล...</p>
-                                </div>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
+                        {% if remoteiot_sites %}
+                        <form method="get" action="/" class="mb-3" style="max-width:280px">
+                            <select name="site" class="form-select form-select-sm" onchange="this.form.submit()">
+                                {% for s in remoteiot_sites %}
+                                <option value="{{ s.key }}" {{ "selected" if s.key == remoteiot_selected_site else "" }}>{{ s.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+
+                        {% if remoteiot_error %}
+                        <div class="alert alert-danger py-1 px-2" style="font-size:0.85rem;">{{ remoteiot_error }}</div>
+                        {% elif remoteiot_devices %}
+                        <table class="table mon-breakdown-table">
+                            <thead><tr><th></th><th>อุปกรณ์</th><th>Serial</th><th>สถานะ</th><th></th></tr></thead>
+                            <tbody>
+                                {% for d in remoteiot_devices %}
+                                <tr>
+                                    <td>
+                                        {% if d.online %}
+                                        <span class="badge bg-success">Online</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Offline</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ d.name }}</td>
+                                    <td><code>{{ d.serial }}</code></td>
+                                    <td>
+                                        {% if d.connection_url %}
+                                        <a href="{{ d.connection_url }}" target="_blank" rel="noopener" class="text-success fw-bold" style="text-decoration:none">สร้างแล้ว</a>
+                                        {% else %}
+                                        <span class="text-muted">ยังไม่ได้สร้าง</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="post" action="/remoteiot/connect" style="margin:0">
+                                            <input type="hidden" name="serial" value="{{ d.serial }}">
+                                            <input type="hidden" name="site" value="{{ remoteiot_selected_site }}">
+                                            <button type="submit" class="btn btn-primary btn-sm"
+                                                    {% if not d.online %}disabled title="อุปกรณ์ออฟไลน์ สร้าง Connection ไม่ได้"{% endif %}>
+                                                {{ "สร้างใหม่" if d.connection_url else "สร้าง" }}
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="mon-empty" style="padding:16px 0;">
+                            <i class="fa-solid fa-tower-broadcast"></i>
+                            <p style="margin:6px 0 0;">กำลังโหลดข้อมูล...</p>
+                        </div>
+                        {% endif %}
                         {% else %}
                         <div class="mon-empty">
                             <i class="fa-solid fa-tower-broadcast"></i>

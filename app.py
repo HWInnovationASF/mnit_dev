@@ -177,23 +177,21 @@ def handle_home():
         device_breakdown = {p: 0 for p in DEVICE_TYPE_PREFIXES + ['Other']}
         device_total = '-'
     remoteiot_sites = remoteiot_client.load_sites()
-    remoteiot_sites_data = []
-    for site in remoteiot_sites:
+    remoteiot_selected_site = request.args.get('site') or (remoteiot_sites[0]['key'] if remoteiot_sites else None)
+
+    remoteiot_devices = []
+    remoteiot_error = None
+    if remoteiot_selected_site:
         try:
-            devices = remoteiot_client.list_devices(site['key'])
-            error = None
+            remoteiot_devices = remoteiot_client.list_devices(remoteiot_selected_site)
         except remoteiot_client.RemoteIoTError as exc:
-            devices = []
-            error = str(exc)
-        remoteiot_sites_data.append({
-            'key': site['key'],
-            'label': site['label'],
-            'devices': devices,
-            'error': error,
-        })
+            remoteiot_error = str(exc)
+
     return render_template(
         'welcome.html', device_total=device_total, device_breakdown=device_breakdown,
-        device_sn_by_type=device_sn_by_type, remoteiot_sites_data=remoteiot_sites_data,
+        device_sn_by_type=device_sn_by_type, remoteiot_sites=remoteiot_sites,
+        remoteiot_selected_site=remoteiot_selected_site, remoteiot_devices=remoteiot_devices,
+        remoteiot_error=remoteiot_error,
     )
     # return render_template('template1.html')
 
