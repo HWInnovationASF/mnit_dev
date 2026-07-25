@@ -91,10 +91,17 @@
                     <div class="mon-panel-body">
                         {% if remoteiot_devices %}
                         <table class="table mon-breakdown-table">
-                            <thead><tr><th>อุปกรณ์</th><th>Serial</th><th>สถานะ</th><th></th></tr></thead>
+                            <thead><tr><th></th><th>อุปกรณ์</th><th>Serial</th><th>สถานะ</th><th></th></tr></thead>
                             <tbody>
                                 {% for d in remoteiot_devices %}
                                 <tr>
+                                    <td>
+                                        {% if d.online %}
+                                        <span class="badge bg-success">Online</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Offline</span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ d.name }}</td>
                                     <td><code>{{ d.serial }}</code></td>
                                     <td>
@@ -108,7 +115,8 @@
                                         <form method="post" action="/remoteiot/connect" style="margin:0">
                                             <input type="hidden" name="serial" value="{{ d.serial }}">
                                             <input type="hidden" name="site" value="{{ remoteiot_default_site }}">
-                                            <button type="submit" class="btn btn-primary btn-sm">
+                                            <button type="submit" class="btn btn-primary btn-sm"
+                                                    {% if not d.online %}disabled title="อุปกรณ์ออฟไลน์ สร้าง Connection ไม่ได้"{% endif %}>
                                                 {{ "สร้างใหม่" if d.connection_url else "สร้าง" }}
                                             </button>
                                         </form>

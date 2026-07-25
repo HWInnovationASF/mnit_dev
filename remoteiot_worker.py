@@ -87,6 +87,11 @@ def _parse_devices(page):
         if not serial_match:
             continue
         connection_match = re.search(r"proxy\d+\.remoteiot\.com:\d+", text)
+
+        status_icon = row.query_selector("img")
+        status_src = status_icon.get_attribute("src") if status_icon else ""
+        online = "online.png" in (status_src or "")
+
         devices.append(
             {
                 "name": cells[0],
@@ -94,6 +99,7 @@ def _parse_devices(page):
                 "connection_url": (
                     f"http://{connection_match.group(0)}" if connection_match else None
                 ),
+                "online": online,
             }
         )
     return devices
