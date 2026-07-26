@@ -3,5 +3,10 @@
         "key": "default",
         "label": "Site 1",
         "email": "hwinnoasefa@gmail.com"
+    },
+    {
+        "key": "asefa.mdbcare81",
+        "label": "Site 2",
+        "email": "asefa.mdbcare81@gmail.com"
     }
 ]
